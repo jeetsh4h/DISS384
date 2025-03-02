@@ -91,7 +91,6 @@ def execute(args):
             print(f"Error: {str(e)}")
             return 1
 
-    # Initialize cache manager
     for date_range in date_ranges:
         start_date, end_date = date_range
         if start_date.year != end_date.year:

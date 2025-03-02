@@ -1,3 +1,4 @@
+import datetime as dt
 from pathlib import Path
 from scipy.io import loadmat
 import matplotlib.pyplot as plt
@@ -20,9 +21,22 @@ class MOSDACConfig:
     LON_MAX = 100
     LAT_LON_RESOLUTION = 0.1
     FRAME_SIZE = (
-        (LAT_MAX - LAT_MIN) * int(LAT_LON_RESOLUTION**-1),
-        (LON_MAX - LON_MIN) * int(LAT_LON_RESOLUTION**-1),
+        (LAT_MAX - LAT_MIN) * int(LAT_LON_RESOLUTION**-1),  # 400
+        (LON_MAX - LON_MIN) * int(LAT_LON_RESOLUTION**-1),  # 400
     )
+
+
+class TrainConfig:
+    TensorBoardLogDir = Path("/home/jeet/FLAME/DISS384/tb_logs")
+
+    OLR_WINDOW_SIZE = 4
+    HEM_WINDOW_SIZE = 4
+
+    TRAIN_START_DT = dt.datetime(2021, 6, 1, 0, 0)
+    TRAIN_END_DT = dt.datetime(2021, 7, 31, 23, 59)
+
+    VAL_START_DT = dt.datetime(2022, 6, 1, 0, 0)
+    VAL_END_DT = dt.datetime(2022, 6, 30, 23, 59)
 
 
 class OLRConfig:
