@@ -13,6 +13,14 @@ def setup_parser(subparsers):
     )
 
     train_parser.add_argument(
+        "--offset",
+        "-no",
+        type=int,
+        required=True,
+        help="The offset at which HEM is nowcasted from the input OLR",
+    )
+
+    train_parser.add_argument(
         "--epochs",
         "-e",
         type=int,
@@ -29,20 +37,14 @@ def setup_parser(subparsers):
     )
 
     train_parser.add_argument(
-        "--offset",
-        "-no",
-        type=int,
-        required=True,
-        help="The offset at which HEM is nowcasted from the input OLR",
-    )
-
-    train_parser.add_argument(
         "--logdir",
         "-l",
         type=str,
         default=TrainConfig.TensorBoardLogDir,
         help="Directory to save TensorBoard logs",
     )
+
+    return train_parser
 
 
 def execute(args):
@@ -55,7 +57,7 @@ def execute(args):
         TrainConfig.HEM_WINDOW_SIZE,
     )
     train_data_gen = tf.data.Dataset.from_generator(
-        load_data_generator(
+        generator=lambda: load_data_generator(
             train_window_fns,
             train_window_timestamps,
             batch_size,
@@ -74,7 +76,7 @@ def execute(args):
         TrainConfig.HEM_WINDOW_SIZE,
     )
     val_data_gen = tf.data.Dataset.from_generator(
-        load_data_generator(
+        generator=lambda: load_data_generator(
             val_window_fns,
             val_window_timestamps,
             batch_size,

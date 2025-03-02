@@ -38,14 +38,14 @@ def olr_window_normalize(olr_window):
         - Fill NaN values based on the closest neighbor
         - Clip values between OLRConfig.MIN and OLRConfig.MAX
     """
-    for i in range(olr_window.shape[0]):
+    for i in range(len(olr_window)):
         # Fill NaNs using the nearest neighbor approach
         frame_filled = _fill_nans_with_nearest(olr_window[i])
 
         # Clip the frame within the allowable range
         olr_window[i] = np.clip(frame_filled, OLRConfig.MIN, OLRConfig.MAX)
 
-    return olr_normalize(olr_window)[..., np.newaxis]
+    return olr_normalize(np.stack(olr_window).astype(np.float16)[..., np.newaxis])
 
 
 def hem_window_normalize(hem_window):
@@ -55,14 +55,14 @@ def hem_window_normalize(hem_window):
         - Clip values between HEMConfig.MIN and HEMConfig.MAX
     """
 
-    for i in range(hem_window.shape[0]):
+    for i in range(len(hem_window)):
         # Fill NaNs using the nearest neighbor approach
         frame_filled = _fill_nans_with_nearest(hem_window[i])
 
         # Clip the frame within the allowable range
         hem_window[i] = np.clip(frame_filled, HEMConfig.MIN, HEMConfig.MAX)
 
-    return hem_normalize(hem_window)[..., np.newaxis]
+    return hem_normalize(np.stack(hem_window).astype(np.float16)[..., np.newaxis])
 
 
 def _fill_nans_with_nearest(arr):

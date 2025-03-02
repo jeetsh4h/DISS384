@@ -6,7 +6,7 @@ import sys
 import argparse
 
 # Import command modules
-from .commands import cache
+from .commands import cache, train
 
 
 def main():
@@ -26,9 +26,9 @@ def main():
 
     # Register commands
     cache_parser = cache.setup_parser(subparsers)
+    train_parser = train.setup_parser(subparsers)
 
     # TODO: Add more commands here as they're implemented
-    # train.setup_parser(subparsers)
     # predict.setup_parser(subparsers)
     # test.setup_parser(subparsers)
     # visualize.setup_parser(subparsers)
@@ -42,8 +42,11 @@ def main():
         return 1
 
     # Execute the appropriate command
-    if args.command == "cache":
-        return cache.execute(args)
+    match args.command:
+        case "cache":
+            return cache.execute(args)
+        case "train":
+            return train.execute(args)
 
     # Command not recognized
     print(f"Error: Unknown command '{args.command}'")

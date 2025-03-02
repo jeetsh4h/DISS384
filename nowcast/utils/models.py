@@ -5,8 +5,12 @@ from ..config import MOSDACConfig, TrainConfig
 
 def encoder_decoder(
     pretrained_weights=None,
-    input_size=(None, TrainConfig.OLR_WINDOW_SIZE, *MOSDACConfig.FRAME_SIZE, 1),
+    input_size=(TrainConfig.OLR_WINDOW_SIZE, *MOSDACConfig.FRAME_SIZE, 1),
 ):
+    #### IMPORTANT ####
+    K.config.set_dtype_policy("float16")
+    #### IMPORTANT ####
+
     inp = K.layers.Input(input_size)
 
     ########## encoder ##########

@@ -3,7 +3,7 @@ import keras.api as K
 
 
 def model_callbacks(args) -> list[K.callbacks.Callback]:
-    log_dir = _generate_log_dir(args.base_logdir, args.offset)
+    log_dir = _generate_log_dir(args.logdir, args.offset)
 
     return [
         K.callbacks.TensorBoard(

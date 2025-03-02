@@ -64,8 +64,8 @@ def load_data_generator(
 
                 ts_batch.append(window_timestamps[j])
 
-            x_batch = np.stack(olr_window_normalize(olr_batch)).astype(np.float16)
-            y_batch = np.stack(hem_window_normalize(hem_batch)).astype(np.float16)
+            x_batch = olr_window_normalize(olr_batch)
+            y_batch = hem_window_normalize(hem_batch)
 
             if yield_batch_ts:
                 yield x_batch, y_batch, ts_batch

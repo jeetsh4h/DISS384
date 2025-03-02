@@ -20,6 +20,17 @@ python -m nowcast cache -v OLR -d 2021-09-20_05:30:2022-09-30_17:29
 python -m nowcast cache -v OLR HEM -d 2022-08-01:2022-08-31
 ```
 
+```bash
+# To train the model
+python -m nowcast train --offset 0
+
+python -m nowcast train -o 4 -b 2
+
+python -m nowcast train -o --batch-size 8
+```
+
+The trainer loads the data from the cache. The default batch size is 4.
+
 ## Data Source
 
 The data being used in this project has been pulled from MOSDAC, more details will be covered in the dissertation draft that will be posted to this repository.
