@@ -177,5 +177,5 @@ cython_debug/
 *.ipynb
 *.ipynb_checkpoints
 
-# symlink for data
+# all data files
 mosdac_*

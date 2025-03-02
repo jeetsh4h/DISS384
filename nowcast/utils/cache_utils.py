@@ -67,15 +67,22 @@ def h5_to_np_dir(
     num_skipped = 0
 
     for fn, ts in zip(h5_filenames, h5_timestamps):
-        np_filename = np_dir / dt.datetime.strftime(ts, np_filename_fmt)
+        np_filename = np_dir / dt.datetime.strftime(ts, np_filename_fmt + ".npy")
 
         # Skip if file is missing or already processed
         if fn is None or np_filename.exists():
             num_skipped += 1
+            print(
+                f"\rSkipping file {num_skipped+num_processed+1}/{num_files} ({ts})...",
+                end="",
+            )
             continue
 
         # Print progress with carriage return to update in-place
-        print(f"\rProcessing file {num_processed+1}/{num_files} ({ts})...", end="")
+        print(
+            f"\rProcessing file {num_processed+num_skipped+1}/{num_files} ({ts})...",
+            end="",
+        )
 
         # Convert h5 to numpy array and save
         np_arr = h5_to_np(fn, target_var)

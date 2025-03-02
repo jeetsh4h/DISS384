@@ -104,6 +104,7 @@ def execute(args):
                 output_dir = DataConfig.CACHE_DIR / var_name
 
                 os.makedirs(output_dir, exist_ok=True)
+                print(f"Processing and caching {var_name}.")
 
                 h5_to_np_dir(
                     h5_dir_path=input_dir,
