@@ -27,7 +27,7 @@ class MOSDACConfig:
 
 
 class TrainConfig:
-    TensorBoardLogDir = Path("/home/jeet/FLAME/DISS384/tb_logs")
+    TensorBoardLogDir = Path("/home/jeet/FLAME/DISS384/logs")
 
     OLR_WINDOW_SIZE = 4
     HEM_WINDOW_SIZE = 4

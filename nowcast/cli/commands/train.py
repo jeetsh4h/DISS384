@@ -1,15 +1,22 @@
+import json
 import tensorflow as tf
+from pathlib import Path
 
 from ...utils.models import encoder_decoder
 from ...config import TrainConfig, MOSDACConfig
-from ...utils.train_utils import model_callbacks
+from ...utils.train_utils import model_callbacks, generate_log_dir
 from ...utils.data_loader import load_data_generator, create_windows
 from ...utils.model_utils import denorm_rmse, weighted_denorm_rmse, non_zero_denorm_rmse
 
 
 def setup_parser(subparsers):
     train_parser = subparsers.add_parser(
-        "train", help="Train a model to nowcast OLR to HEM."
+        "train",
+        help=(
+            "Train a model to nowcast OLR to HEM. "
+            + "Currently, it only pulls data from the cache directory. "
+            + "Run the `cache` command first, and then `train`"
+        ),
     )
 
     train_parser.add_argument(
@@ -41,7 +48,7 @@ def setup_parser(subparsers):
         "-l",
         type=str,
         default=TrainConfig.TensorBoardLogDir,
-        help="Directory to save TensorBoard logs",
+        help="Directory to save TensorBoard logs. To view the board, run `tensorboard --logdir <logdir>`",
     )
 
     return train_parser
@@ -65,8 +72,8 @@ def execute(args):
             yield_batch_ts=False,
         ),
         output_signature=(
-            tf.TensorSpec(shape=(batch_size, TrainConfig.OLR_WINDOW_SIZE, *MOSDACConfig.FRAME_SIZE, 1), dtype=tf.float16),  # type: ignore
-            tf.TensorSpec(shape=(batch_size, TrainConfig.HEM_WINDOW_SIZE, *MOSDACConfig.FRAME_SIZE, 1), dtype=tf.float16),  # type: ignore
+            tf.TensorSpec(shape=(None, TrainConfig.OLR_WINDOW_SIZE, *MOSDACConfig.FRAME_SIZE, 1), dtype=tf.float16),  # type: ignore
+            tf.TensorSpec(shape=(None, TrainConfig.HEM_WINDOW_SIZE, *MOSDACConfig.FRAME_SIZE, 1), dtype=tf.float16),  # type: ignore
         ),
     )
 
@@ -80,12 +87,12 @@ def execute(args):
             val_window_fns,
             val_window_timestamps,
             batch_size,
-            shuffle=False,
+            shuffle=True,
             yield_batch_ts=False,
         ),
         output_signature=(
-            tf.TensorSpec(shape=(batch_size, TrainConfig.OLR_WINDOW_SIZE, *MOSDACConfig.FRAME_SIZE, 1), dtype=tf.float16),  # type: ignore
-            tf.TensorSpec(shape=(batch_size, TrainConfig.HEM_WINDOW_SIZE, *MOSDACConfig.FRAME_SIZE, 1), dtype=tf.float16),  # type: ignore
+            tf.TensorSpec(shape=(None, TrainConfig.OLR_WINDOW_SIZE, *MOSDACConfig.FRAME_SIZE, 1), dtype=tf.float16),  # type: ignore
+            tf.TensorSpec(shape=(None, TrainConfig.HEM_WINDOW_SIZE, *MOSDACConfig.FRAME_SIZE, 1), dtype=tf.float16),  # type: ignore
         ),
     )
 
@@ -98,21 +105,35 @@ def execute(args):
         metrics=[non_zero_denorm_rmse, denorm_rmse],
     )
 
+    # Log directory for Model
+    logdir = generate_log_dir(Path(args.logdir), args.offset)
+
     # Train the model with callbacks
     history = model.fit(
         train_data_gen.prefetch(tf.data.experimental.AUTOTUNE),
         steps_per_epoch=(
             len(train_window_fns) // batch_size
             if len(train_window_fns) % batch_size == 0
-            else len(train_window_fns) // batch_size + 1
+            else (len(train_window_fns) // batch_size) + 1
         ),
         validation_data=val_data_gen.prefetch(tf.data.experimental.AUTOTUNE),
         validation_steps=(
             len(val_window_fns) // batch_size
             if len(val_window_fns) % batch_size == 0
-            else len(val_window_fns) // batch_size + 1
+            else (len(val_window_fns) // batch_size) + 1
         ),
         epochs=epochs,
-        callbacks=model_callbacks(args),
+        callbacks=model_callbacks(logdir),
         verbose="auto",
     )
+
+    # Save model
+    model.save(logdir / "model.keras")
+
+    # Save training history to a JSON file
+    history_dict = history.history
+    with open(logdir / "training_history.json", "w") as f:
+        json.dump(history_dict, f, indent=4)
+
+    print(f"Model and training history saved to {logdir}")
+    print(f"To view TensorBoard, run: `tensorboard --logdir {logdir}`")

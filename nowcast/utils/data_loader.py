@@ -56,16 +56,21 @@ def load_data_generator(
                 olr_window_fns = window_fns[j][: TrainConfig.OLR_WINDOW_SIZE]
                 hem_window_fns = window_fns[j][TrainConfig.OLR_WINDOW_SIZE :]
 
-                assert len(olr_window_fns) == TrainConfig.OLR_WINDOW_SIZE
-                assert len(hem_window_fns) == TrainConfig.HEM_WINDOW_SIZE
-
-                olr_batch.append([np.load(frame_fn) for frame_fn in olr_window_fns])
-                hem_batch.append([np.load(frame_fn) for frame_fn in hem_window_fns])
+                olr_batch.append(
+                    olr_window_normalize(
+                        [np.load(frame_fn) for frame_fn in olr_window_fns]
+                    )
+                )
+                hem_batch.append(
+                    hem_window_normalize(
+                        [np.load(frame_fn) for frame_fn in hem_window_fns]
+                    )
+                )
 
                 ts_batch.append(window_timestamps[j])
 
-            x_batch = olr_window_normalize(olr_batch)
-            y_batch = hem_window_normalize(hem_batch)
+            x_batch = np.stack(olr_batch)
+            y_batch = np.stack(hem_batch)
 
             if yield_batch_ts:
                 yield x_batch, y_batch, ts_batch

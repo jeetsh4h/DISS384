@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.ndimage import distance_transform_edt
+from scipy.interpolate import NearestNDInterpolator
 
 from ..config import OLRConfig, HEMConfig
 
@@ -40,7 +40,7 @@ def olr_window_normalize(olr_window):
     """
     for i in range(len(olr_window)):
         # Fill NaNs using the nearest neighbor approach
-        frame_filled = _fill_nans_with_nearest(olr_window[i])
+        frame_filled = _fill_nans_with_interpolation(olr_window[i])
 
         # Clip the frame within the allowable range
         olr_window[i] = np.clip(frame_filled, OLRConfig.MIN, OLRConfig.MAX)
@@ -57,7 +57,7 @@ def hem_window_normalize(hem_window):
 
     for i in range(len(hem_window)):
         # Fill NaNs using the nearest neighbor approach
-        frame_filled = _fill_nans_with_nearest(hem_window[i])
+        frame_filled = _fill_nans_with_interpolation(hem_window[i])
 
         # Clip the frame within the allowable range
         hem_window[i] = np.clip(frame_filled, HEMConfig.MIN, HEMConfig.MAX)
@@ -65,14 +65,39 @@ def hem_window_normalize(hem_window):
     return hem_normalize(np.stack(hem_window).astype(np.float16)[..., np.newaxis])
 
 
-def _fill_nans_with_nearest(arr):
+def _fill_nans_with_interpolation(arr):
     """
     Fill NaN values in a 2D array using the nearest non-NaN neighbor.
+    If interpolation fails for some values, fill with mean as fallback.
     """
     mask = np.isnan(arr)
     if not mask.any():
         return arr
 
-    # Get indices of the nearest valid value for every element
-    indices = distance_transform_edt(mask, return_distances=False, return_indices=True)
-    return arr[tuple(indices)]  # type: ignore
+    # First attempt: nearest neighbor interpolation
+    x_non_nan, y_non_nan = np.where(~mask)
+    if len(x_non_nan) == 0:  # All values are NaN
+        return np.zeros_like(arr)  # Return zeros as fallback
+
+    values_non_nan = arr[x_non_nan, y_non_nan]
+
+    interp_nn = NearestNDInterpolator(
+        np.array([x_non_nan, y_non_nan]).T, values_non_nan
+    )
+
+    x_nan, y_nan = np.where(mask)
+    imputed_values = interp_nn(np.array([x_nan, y_nan]).T)
+    arr[x_nan, y_nan] = imputed_values
+
+    # Check if any NaNs remain and fill them with mean
+    remaining_mask = np.isnan(arr)
+    if remaining_mask.any():
+        if len(values_non_nan) > 0:
+            fill_value = np.mean(values_non_nan)
+        else:
+            raise ValueError("Too many NaN values")
+        arr[remaining_mask] = fill_value
+
+    assert not np.isnan(arr).any(), "NaN values still present after interpolation"
+
+    return arr
