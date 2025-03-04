@@ -57,11 +57,12 @@ def setup_parser(subparsers):
 def execute(args):
     epochs = args.epochs
     batch_size = args.batch_size
+    offset = args.offset
 
     train_window_fns, train_window_timestamps = create_windows(
         TrainConfig.TRAIN_START_DT,
         TrainConfig.TRAIN_END_DT,
-        TrainConfig.HEM_WINDOW_SIZE,
+        offset,
     )
     train_data_gen = tf.data.Dataset.from_generator(
         generator=lambda: load_data_generator(
@@ -80,7 +81,7 @@ def execute(args):
     val_window_fns, val_window_timestamps = create_windows(
         TrainConfig.VAL_START_DT,
         TrainConfig.VAL_END_DT,
-        TrainConfig.HEM_WINDOW_SIZE,
+        offset,
     )
     val_data_gen = tf.data.Dataset.from_generator(
         generator=lambda: load_data_generator(
