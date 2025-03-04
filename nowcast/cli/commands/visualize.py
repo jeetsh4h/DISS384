@@ -58,6 +58,14 @@ def setup_parser(subparsers):
         help="Log the normalized prediction as an image.",
     )
 
+    visualize_parser.add_argument(
+        "-c",
+        "--use-checkpoint",
+        type=bool,
+        default=False,
+        help="Use the checkpoint model instead of the final model.",
+    )
+
     return visualize_parser
 
 
@@ -69,7 +77,12 @@ def execute(args):
         )
         return 1
 
-    model_path = model_dir / "model.keras"
+    model_path = (
+        model_dir / "model.keras"
+        if not args.use_checkpoint
+        else model_dir / "model_checkpoint.keras"
+    )
+
     if not model_path.exists():
         print(
             f"Error: The specified model '{args.model}' does not contain a trained model."
