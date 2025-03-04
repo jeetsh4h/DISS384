@@ -3,6 +3,9 @@ import keras.api as K
 from pathlib import Path
 
 
+# TODO: add callback to show predicted images in TensorBoard
+#       Choose the same three random ones for each image
+#       Use a custom LambdaCallback to do this (on every epoch).
 def model_callbacks(logdir: Path) -> list[K.callbacks.Callback]:
     return [
         K.callbacks.TensorBoard(

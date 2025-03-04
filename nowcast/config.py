@@ -39,6 +39,11 @@ class TrainConfig:
     VAL_END_DT = dt.datetime(2022, 6, 30, 23, 59)
 
 
+class TestConfig:
+    TEST_START_DT = dt.datetime(2022, 7, 1, 0, 0)
+    TEST_END_DT = dt.datetime(2022, 7, 31, 23, 59)
+
+
 class OLRConfig:
     MAX = 380
     MIN = 50

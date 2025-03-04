@@ -179,4 +179,4 @@ cython_debug/
 
 # all data files
 mosdac_*
-*logs*
+*log*

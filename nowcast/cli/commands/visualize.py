@@ -50,6 +50,14 @@ def setup_parser(subparsers):
         help="The offset at which HEM is nowcasted from the input OLR. Will be taken from the model's directory name if not provided.",
     )
 
+    visualize_parser.add_argument(
+        "--log-norm",
+        "-ln",
+        type=bool,
+        default=False,
+        help="Log the normalized prediction as an image.",
+    )
+
     return visualize_parser
 
 
@@ -61,8 +69,8 @@ def execute(args):
         )
         return 1
 
-    model_dir /= "model.keras"
-    if not model_dir.exists():
+    model_path = model_dir / "model.keras"
+    if not model_path.exists():
         print(
             f"Error: The specified model '{args.model}' does not contain a trained model."
         )
@@ -109,11 +117,14 @@ def execute(args):
                 dates.append(current_date)
                 current_date += dt.timedelta(minutes=30)
 
-    assert (not dates) and (not offset)
+    assert dates and (offset is not None)
 
     loaded_model = K.models.load_model(
-        model_dir
+        model_path
     )  # type: K.models.Model  # type: ignore
+
+    fig_dir = model_dir / "figures"
+    fig_dir.mkdir(exist_ok=True)
 
     for date in dates:
         olr_norm_data, hem_norm_data = window_by_date(date, offset)
@@ -123,6 +134,28 @@ def execute(args):
         assert (olr_norm_data is not None) and (hem_norm_data is not None)
 
         hem_norm_prediction = loaded_model.predict(olr_norm_data[np.newaxis, ...], batch_size=1)  # type: ignore
+
+        # log normalized prediction as an image
+        if args.log_norm:
+            fig, axs = plt.subplots(1, 4, figsize=(16, 8))
+            for i, ax in enumerate(axs):
+                ax.imshow(
+                    hem_norm_prediction[0, ..., 0][i],
+                    origin="lower",
+                    extent=[
+                        MOSDACConfig.LON_MIN,
+                        MOSDACConfig.LON_MAX,
+                        MOSDACConfig.LAT_MIN,
+                        MOSDACConfig.LAT_MAX,
+                    ],
+                    cmap="tab20b",
+                    vmin=0,
+                    vmax=1,
+                )
+                ax.set_title(f"Frame {i + 1}")
+
+            fig.savefig("./log.png")
+            plt.close(fig)
 
         hem_denorm_prediction = hem_denormalize(hem_norm_prediction[0, ..., 0])
 
@@ -134,9 +167,11 @@ def execute(args):
             == (TrainConfig.HEM_WINDOW_SIZE, *MOSDACConfig.FRAME_SIZE)
         )
 
-        fig = visualize_hem_compare(hem_norm_prediction, hem_denorm_truth, date, offset)
+        fig = visualize_hem_compare(
+            hem_denorm_prediction, hem_denorm_truth, date, offset
+        )
 
-        fig.savefig(model_dir / "figures" / f"{date.strftime('%Y-%m-%d_%H:%M')}.png")
+        fig.savefig(fig_dir / f"{date.strftime('%Y-%m-%d_%H:%M')}.png")
         plt.close(fig)
 
 
