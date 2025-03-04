@@ -1,12 +1,7 @@
-"""
-Main entry point for nowcast CLI.
-"""
-
 import sys
 import argparse
 
-# Import command modules
-from .commands import cache, train, visualize
+from .commands import cache, train, visualize, test
 
 
 def main():
@@ -28,10 +23,7 @@ def main():
     cache_parser = cache.setup_parser(subparsers)
     train_parser = train.setup_parser(subparsers)
     visualize_parser = visualize.setup_parser(subparsers)
-
-    # TODO: Add more commands here as they're implemented
-    # predict.setup_parser(subparsers)
-    # test.setup_parser(subparsers)
+    test_parser = test.setup_parser(subparsers)
 
     # Parse arguments
     args = parser.parse_args()
@@ -49,6 +41,8 @@ def main():
             return train.execute(args)
         case "visualize":
             return visualize.execute(args)
+        case "test":
+            return test.execute(args)
 
     # Command not recognized
     print(f"Error: Unknown command '{args.command}'")
