@@ -43,7 +43,7 @@ def weighted_denorm_rmse(y_true, y_pred):
     Again, only done after denormalization. The current weight distribution is
     80% for non-zero values and 20% for zero values.
     """
-    mask = y_true < 1e-9
+    mask = y_true == 0
     return 0.80 * tf.sqrt(
         tf.reduce_mean(
             tf.square((hem_denormalize(y_true) - hem_denormalize(y_pred))[mask])
