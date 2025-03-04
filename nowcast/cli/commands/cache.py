@@ -1,8 +1,3 @@
-"""
-Command for caching H5 satellite data as NumPy arrays.
-"""
-
-import os
 import datetime as dt
 
 from ...config import DataConfig
@@ -66,11 +61,11 @@ def execute(args):
                 input_dir = DataConfig.DATA_DIR / var_name / f"May-Sep{start_date.year}"
                 output_dir = DataConfig.CACHE_DIR / var_name
 
-                os.makedirs(output_dir, exist_ok=True)
+                output_dir.mkdir(parents=True, exist_ok=True)
                 print(f"Processing and caching {var_name}.")
 
                 h5_to_np_dir(
-                    h5_dir_path=input_dir,
+                    h5_dir_path=input_dir,  # gets coerced to become str
                     target_var=var_name,
                     h5_start_date=start_date,
                     h5_end_date=end_date,

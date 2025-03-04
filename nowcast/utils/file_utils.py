@@ -1,9 +1,3 @@
-"""
-Utilities for handling satellite data files from MOSDAC.
-Provides functionality to convert h5 files to numpy arrays and
-find satellite files within a specific date range.
-"""
-
 import os
 import h5py
 import numpy as np

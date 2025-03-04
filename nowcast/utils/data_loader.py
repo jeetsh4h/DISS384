@@ -1,7 +1,3 @@
-"""
-Data loader utilities for the nowcast package.
-"""
-
 import numpy as np
 import datetime as dt
 

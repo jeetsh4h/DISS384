@@ -2,8 +2,8 @@ import numpy as np
 import datetime as dt
 import matplotlib.pyplot as plt
 
-from ..config import TrainConfig, DataConfig, VizConfig
 from ..utils.file_utils import find_by_date
+from ..config import TrainConfig, DataConfig, VizConfig
 from ..utils.normalize import hem_window_normalize, olr_window_normalize
 
 

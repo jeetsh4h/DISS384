@@ -1,8 +1,3 @@
-"""
-Utilities for caching satellite data as numpy arrays.
-Provides functionality to convert h5 files to numpy arrays and save them for faster access.
-"""
-
 import numpy as np
 import datetime as dt
 from pathlib import Path

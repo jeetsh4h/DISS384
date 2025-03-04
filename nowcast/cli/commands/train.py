@@ -73,8 +73,14 @@ def execute(args):
             yield_batch_ts=False,
         ),
         output_signature=(
-            tf.TensorSpec(shape=(None, TrainConfig.OLR_WINDOW_SIZE, *MOSDACConfig.FRAME_SIZE, 1), dtype=tf.float16),  # type: ignore
-            tf.TensorSpec(shape=(None, TrainConfig.HEM_WINDOW_SIZE, *MOSDACConfig.FRAME_SIZE, 1), dtype=tf.float16),  # type: ignore
+            tf.TensorSpec(
+                shape=(None, TrainConfig.OLR_WINDOW_SIZE, *MOSDACConfig.FRAME_SIZE, 1),  # type: ignore
+                dtype=tf.float16,  # type: ignore
+            ),
+            tf.TensorSpec(
+                shape=(None, TrainConfig.HEM_WINDOW_SIZE, *MOSDACConfig.FRAME_SIZE, 1),  # type: ignore
+                dtype=tf.float16,  # type: ignore
+            ),
         ),
     )
 
