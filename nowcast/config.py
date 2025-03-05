@@ -1,5 +1,6 @@
 import numpy as np
 import datetime as dt
+import keras.api as K
 import tensorflow as tf
 from pathlib import Path
 from scipy.io import loadmat
@@ -34,8 +35,9 @@ class TFDataConfig:
 
     TB_LOG_DIR = Path("/home/jeet/FLAME/DISS384/logs")
 
-    TF_DTYPE = tf.float16
-    NP_DTYPE = np.float16
+    DTYPE = tf.float32
+    assert DTYPE.is_numpy_compatible, "DTYPE must be numpy compatible"
+    K.config.set_dtype_policy(DTYPE.name)
 
 
 class TrainConfig:

@@ -75,11 +75,11 @@ def execute(args):
         output_signature=(
             tf.TensorSpec(
                 shape=(None, TFDataConfig.OLR_WINDOW_SIZE, *MOSDACConfig.FRAME_SIZE, 1),  # type: ignore
-                dtype=TFDataConfig.TF_DTYPE,  # type: ignore
+                dtype=TFDataConfig.DTYPE,  # type: ignore
             ),
             tf.TensorSpec(
                 shape=(None, TFDataConfig.HEM_WINDOW_SIZE, *MOSDACConfig.FRAME_SIZE, 1),  # type: ignore
-                dtype=TFDataConfig.TF_DTYPE,  # type: ignore
+                dtype=TFDataConfig.DTYPE,  # type: ignore
             ),
         ),
     )
@@ -100,11 +100,11 @@ def execute(args):
         output_signature=(
             tf.TensorSpec(
                 shape=(None, TFDataConfig.HEM_WINDOW_SIZE, *MOSDACConfig.FRAME_SIZE, 1),  # type: ignore
-                dtype=TFDataConfig.TF_DTYPE,  # type: ignore
+                dtype=TFDataConfig.DTYPE,  # type: ignore
             ),
             tf.TensorSpec(
                 shape=(None, TFDataConfig.OLR_WINDOW_SIZE, *MOSDACConfig.FRAME_SIZE, 1),  # type: ignore
-                dtype=TFDataConfig.TF_DTYPE,  # type: ignore
+                dtype=TFDataConfig.DTYPE,  # type: ignore
             ),
         ),
     )

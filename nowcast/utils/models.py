@@ -8,10 +8,6 @@ def encoder_decoder(
     input_size=(TFDataConfig.OLR_WINDOW_SIZE, *MOSDACConfig.FRAME_SIZE, 1),
 ):
 
-    #### IMPORTANT ####
-    K.config.set_dtype_policy(TFDataConfig.TF_DTYPE)
-    #### IMPORTANT ####
-
     inp = K.layers.Input(input_size)
 
     ########## encoder ##########

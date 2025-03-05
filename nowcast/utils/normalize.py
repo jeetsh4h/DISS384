@@ -46,7 +46,7 @@ def olr_window_normalize(olr_window):
         olr_window[i] = np.clip(frame_filled, OLRConfig.MIN, OLRConfig.MAX)
 
     return olr_normalize(
-        np.stack(olr_window).astype(TFDataConfig.NP_DTYPE)[..., np.newaxis]
+        np.stack(olr_window).astype(TFDataConfig.DTYPE.as_numpy_dtype)[..., np.newaxis]
     )
 
 
@@ -65,7 +65,7 @@ def hem_window_normalize(hem_window):
         hem_window[i] = np.clip(frame_filled, HEMConfig.MIN, HEMConfig.MAX)
 
     return hem_normalize(
-        np.stack(hem_window).astype(TFDataConfig.NP_DTYPE)[..., np.newaxis]
+        np.stack(hem_window).astype(TFDataConfig.DTYPE.as_numpy_dtype)[..., np.newaxis]
     )
 
 

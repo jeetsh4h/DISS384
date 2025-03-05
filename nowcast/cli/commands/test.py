@@ -3,8 +3,8 @@ import keras.api as K
 import tensorflow as tf
 from pathlib import Path
 
-from ...utils.data_loader import create_windows, load_data_generator
 from ...config import MOSDACConfig, TestConfig, TFDataConfig
+from ...utils.data_loader import create_windows, load_data_generator
 
 
 def setup_parser(subparsers):
@@ -89,11 +89,11 @@ def execute(args):
         output_signature=(
             tf.TensorSpec(
                 shape=(None, TFDataConfig.OLR_WINDOW_SIZE, *MOSDACConfig.FRAME_SIZE, 1),  # type: ignore
-                dtype=TFDataConfig.TF_DTYPE,  # type: ignore
+                dtype=TFDataConfig.DTYPE,  # type: ignore
             ),
             tf.TensorSpec(
                 shape=(None, TFDataConfig.HEM_WINDOW_SIZE, *MOSDACConfig.FRAME_SIZE, 1),  # type: ignore
-                dtype=TFDataConfig.TF_DTYPE,  # type: ignore
+                dtype=TFDataConfig.DTYPE,  # type: ignore
             ),
         ),
     )
