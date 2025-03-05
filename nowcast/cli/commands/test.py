@@ -4,7 +4,7 @@ import tensorflow as tf
 from pathlib import Path
 
 from ...utils.data_loader import create_windows, load_data_generator
-from ...config import MOSDACConfig, TestConfig, TrainConfig, TrainConfig
+from ...config import MOSDACConfig, TestConfig, TFDataConfig
 
 
 def setup_parser(subparsers):
@@ -45,7 +45,7 @@ def setup_parser(subparsers):
 
 
 def execute(args):
-    model_dir: Path = TrainConfig.TensorBoardLogDir / args.model
+    model_dir: Path = TFDataConfig.TB_LOG_DIR / args.model
     if not model_dir.exists():
         print(
             f"Error: The specified model '{args.model}' does not exist in the log directory."
@@ -88,12 +88,12 @@ def execute(args):
         ),
         output_signature=(
             tf.TensorSpec(
-                shape=(None, TrainConfig.OLR_WINDOW_SIZE, *MOSDACConfig.FRAME_SIZE, 1),  # type: ignore
-                dtype=tf.float16,  # type: ignore
+                shape=(None, TFDataConfig.OLR_WINDOW_SIZE, *MOSDACConfig.FRAME_SIZE, 1),  # type: ignore
+                dtype=TFDataConfig.TF_DTYPE,  # type: ignore
             ),
             tf.TensorSpec(
-                shape=(None, TrainConfig.HEM_WINDOW_SIZE, *MOSDACConfig.FRAME_SIZE, 1),  # type: ignore
-                dtype=tf.float16,  # type: ignore
+                shape=(None, TFDataConfig.HEM_WINDOW_SIZE, *MOSDACConfig.FRAME_SIZE, 1),  # type: ignore
+                dtype=TFDataConfig.TF_DTYPE,  # type: ignore
             ),
         ),
     )

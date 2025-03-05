@@ -2,7 +2,7 @@ import numpy as np
 import datetime as dt
 
 from ..utils.cache_utils import find_by_date
-from ..config import DataConfig, TrainConfig
+from ..config import DataConfig, TFDataConfig
 from ..utils.normalize import olr_window_normalize, hem_window_normalize
 
 
@@ -49,8 +49,8 @@ def load_data_generator(
             ts_batch = []
 
             for j in batch_ids:
-                olr_window_fns = window_fns[j][: TrainConfig.OLR_WINDOW_SIZE]
-                hem_window_fns = window_fns[j][TrainConfig.OLR_WINDOW_SIZE :]
+                olr_window_fns = window_fns[j][: TFDataConfig.OLR_WINDOW_SIZE]
+                hem_window_fns = window_fns[j][TFDataConfig.OLR_WINDOW_SIZE :]
 
                 olr_batch.append(
                     olr_window_normalize(
@@ -102,8 +102,8 @@ def create_windows(
     """
     olr_frame_fns, hem_frame_fns, frame_timestamps = _corr_fn_ts(start_time, end_time)
 
-    olr_window_size = TrainConfig.OLR_WINDOW_SIZE
-    hem_window_size = TrainConfig.HEM_WINDOW_SIZE
+    olr_window_size = TFDataConfig.OLR_WINDOW_SIZE
+    hem_window_size = TFDataConfig.HEM_WINDOW_SIZE
 
     window_fns: list[list[str]] = []
     window_timestamps: list[dt.datetime] = []

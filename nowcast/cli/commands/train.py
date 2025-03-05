@@ -3,7 +3,7 @@ import tensorflow as tf
 from pathlib import Path
 
 from ...utils.models import encoder_decoder
-from ...config import TrainConfig, MOSDACConfig
+from ...config import TrainConfig, MOSDACConfig, TFDataConfig
 from ...utils.train_utils import model_callbacks, generate_log_dir
 from ...utils.data_loader import load_data_generator, create_windows
 from ...utils.model_utils import denorm_rmse, weighted_denorm_rmse, non_zero_denorm_rmse
@@ -47,7 +47,7 @@ def setup_parser(subparsers):
         "--logdir",
         "-l",
         type=str,
-        default=TrainConfig.TensorBoardLogDir,
+        default=TFDataConfig.TB_LOG_DIR,
         help="Directory to save TensorBoard logs. To view the board, run `tensorboard --logdir <logdir>`",
     )
 
@@ -74,12 +74,12 @@ def execute(args):
         ),
         output_signature=(
             tf.TensorSpec(
-                shape=(None, TrainConfig.OLR_WINDOW_SIZE, *MOSDACConfig.FRAME_SIZE, 1),  # type: ignore
-                dtype=tf.float16,  # type: ignore
+                shape=(None, TFDataConfig.OLR_WINDOW_SIZE, *MOSDACConfig.FRAME_SIZE, 1),  # type: ignore
+                dtype=TFDataConfig.TF_DTYPE,  # type: ignore
             ),
             tf.TensorSpec(
-                shape=(None, TrainConfig.HEM_WINDOW_SIZE, *MOSDACConfig.FRAME_SIZE, 1),  # type: ignore
-                dtype=tf.float16,  # type: ignore
+                shape=(None, TFDataConfig.HEM_WINDOW_SIZE, *MOSDACConfig.FRAME_SIZE, 1),  # type: ignore
+                dtype=TFDataConfig.TF_DTYPE,  # type: ignore
             ),
         ),
     )
@@ -98,8 +98,14 @@ def execute(args):
             yield_batch_ts=False,
         ),
         output_signature=(
-            tf.TensorSpec(shape=(None, TrainConfig.OLR_WINDOW_SIZE, *MOSDACConfig.FRAME_SIZE, 1), dtype=tf.float16),  # type: ignore
-            tf.TensorSpec(shape=(None, TrainConfig.HEM_WINDOW_SIZE, *MOSDACConfig.FRAME_SIZE, 1), dtype=tf.float16),  # type: ignore
+            tf.TensorSpec(
+                shape=(None, TFDataConfig.HEM_WINDOW_SIZE, *MOSDACConfig.FRAME_SIZE, 1),  # type: ignore
+                dtype=TFDataConfig.TF_DTYPE,  # type: ignore
+            ),
+            tf.TensorSpec(
+                shape=(None, TFDataConfig.OLR_WINDOW_SIZE, *MOSDACConfig.FRAME_SIZE, 1),  # type: ignore
+                dtype=TFDataConfig.TF_DTYPE,  # type: ignore
+            ),
         ),
     )
 

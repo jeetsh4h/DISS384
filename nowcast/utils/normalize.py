@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.interpolate import NearestNDInterpolator
 
-from ..config import OLRConfig, HEMConfig
+from ..config import OLRConfig, HEMConfig, TFDataConfig
 
 
 def olr_normalize(olr):
@@ -45,7 +45,9 @@ def olr_window_normalize(olr_window):
         # Clip the frame within the allowable range
         olr_window[i] = np.clip(frame_filled, OLRConfig.MIN, OLRConfig.MAX)
 
-    return olr_normalize(np.stack(olr_window).astype(np.float16)[..., np.newaxis])
+    return olr_normalize(
+        np.stack(olr_window).astype(TFDataConfig.NP_DTYPE)[..., np.newaxis]
+    )
 
 
 def hem_window_normalize(hem_window):
@@ -62,7 +64,9 @@ def hem_window_normalize(hem_window):
         # Clip the frame within the allowable range
         hem_window[i] = np.clip(frame_filled, HEMConfig.MIN, HEMConfig.MAX)
 
-    return hem_normalize(np.stack(hem_window).astype(np.float16)[..., np.newaxis])
+    return hem_normalize(
+        np.stack(hem_window).astype(TFDataConfig.NP_DTYPE)[..., np.newaxis]
+    )
 
 
 def _fill_nans_with_interpolation(arr):

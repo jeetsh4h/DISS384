@@ -1,4 +1,6 @@
+import numpy as np
 import datetime as dt
+import tensorflow as tf
 from pathlib import Path
 from scipy.io import loadmat
 import matplotlib.pyplot as plt
@@ -26,12 +28,17 @@ class MOSDACConfig:
     )
 
 
-class TrainConfig:
-    TensorBoardLogDir = Path("/home/jeet/FLAME/DISS384/logs")
-
+class TFDataConfig:
     OLR_WINDOW_SIZE = 4
     HEM_WINDOW_SIZE = 4
 
+    TB_LOG_DIR = Path("/home/jeet/FLAME/DISS384/logs")
+
+    TF_DTYPE = tf.float16
+    NP_DTYPE = np.float16
+
+
+class TrainConfig:
     TRAIN_START_DT = dt.datetime(2021, 6, 1, 0, 0)
     TRAIN_END_DT = dt.datetime(2021, 7, 31, 23, 59)
 

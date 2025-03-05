@@ -3,17 +3,17 @@ import datetime as dt
 import matplotlib.pyplot as plt
 
 from ..utils.file_utils import find_by_date
-from ..config import TrainConfig, DataConfig, VizConfig
+from ..config import TFDataConfig, DataConfig, VizConfig
 from ..utils.normalize import hem_window_normalize, olr_window_normalize
 
 
 def window_by_date(date: dt.datetime, offset: int):
     olr_start_time = date
-    olr_end_time = date + dt.timedelta(minutes=30 * (TrainConfig.OLR_WINDOW_SIZE - 1))
+    olr_end_time = date + dt.timedelta(minutes=30 * (TFDataConfig.OLR_WINDOW_SIZE - 1))
 
     hem_start_time = olr_end_time + dt.timedelta(hours=offset)
     hem_end_time = hem_start_time + dt.timedelta(
-        minutes=30 * (TrainConfig.HEM_WINDOW_SIZE - 1)
+        minutes=30 * (TFDataConfig.HEM_WINDOW_SIZE - 1)
     )
 
     try:
@@ -43,8 +43,8 @@ def window_by_date(date: dt.datetime, offset: int):
         return None, None
 
     if (
-        len(olr_frame_fns) < TrainConfig.OLR_WINDOW_SIZE
-        or len(hem_frame_fns) < TrainConfig.HEM_WINDOW_SIZE
+        len(olr_frame_fns) < TFDataConfig.OLR_WINDOW_SIZE
+        or len(hem_frame_fns) < TFDataConfig.HEM_WINDOW_SIZE
         or None in olr_frame_fns
         or None in hem_frame_fns
     ):
@@ -58,7 +58,7 @@ def window_by_date(date: dt.datetime, offset: int):
 
 
 def visualize_hem_compare(y_pred, y_true, date, offset):
-    fig = plt.figure(figsize=(int((TrainConfig.HEM_WINDOW_SIZE * 3.2) + 0.4), 7.0))
+    fig = plt.figure(figsize=(int((TFDataConfig.HEM_WINDOW_SIZE * 3.2) + 0.4), 7.0))
     # Adding the main title at the bottom of the figure
     fig.suptitle(
         f"Prediction Comparison for {offset} hours offset",
@@ -72,14 +72,14 @@ def visualize_hem_compare(y_pred, y_true, date, offset):
     # Predicted HEM subfigure
     hem_pred.suptitle(f"Predicted HEM", fontsize=16)
 
-    axs_pred = hem_pred.subplots(1, TrainConfig.HEM_WINDOW_SIZE)
+    axs_pred = hem_pred.subplots(1, TFDataConfig.HEM_WINDOW_SIZE)
     im_pred = None
     for i, ax in enumerate(axs_pred):
         ax.set_title(
             dt.datetime.strftime(
                 date
                 + dt.timedelta(
-                    hours=offset, minutes=30 * (TrainConfig.OLR_WINDOW_SIZE + i)
+                    hours=offset, minutes=30 * (TFDataConfig.OLR_WINDOW_SIZE + i)
                 ),
                 "%H:%M %d-%m-%Y",
             )
@@ -94,14 +94,14 @@ def visualize_hem_compare(y_pred, y_true, date, offset):
 
     # True HEM subfigure
     hem_true.suptitle(f"True HEM", fontsize=16)
-    axs_true = hem_true.subplots(1, TrainConfig.HEM_WINDOW_SIZE)
+    axs_true = hem_true.subplots(1, TFDataConfig.HEM_WINDOW_SIZE)
     im_true = None
     for i, ax in enumerate(axs_true):
         ax.set_title(
             dt.datetime.strftime(
                 date
                 + dt.timedelta(
-                    hours=offset, minutes=30 * (TrainConfig.OLR_WINDOW_SIZE + i)
+                    hours=offset, minutes=30 * (TFDataConfig.OLR_WINDOW_SIZE + i)
                 ),
                 "%H:%M %d-%m-%Y",
             )

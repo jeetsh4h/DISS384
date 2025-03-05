@@ -1,14 +1,15 @@
 import keras.api as K
 
-from ..config import MOSDACConfig, TrainConfig
+from ..config import TFDataConfig, MOSDACConfig
 
 
 def encoder_decoder(
     pretrained_weights=None,
-    input_size=(TrainConfig.OLR_WINDOW_SIZE, *MOSDACConfig.FRAME_SIZE, 1),
+    input_size=(TFDataConfig.OLR_WINDOW_SIZE, *MOSDACConfig.FRAME_SIZE, 1),
 ):
+
     #### IMPORTANT ####
-    K.config.set_dtype_policy("float16")
+    K.config.set_dtype_policy(TFDataConfig.TF_DTYPE)
     #### IMPORTANT ####
 
     inp = K.layers.Input(input_size)

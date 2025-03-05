@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 
 from ...utils.normalize import hem_denormalize
-from ...config import MOSDACConfig, TrainConfig
+from ...config import MOSDACConfig, TFDataConfig
 from ...utils.viz_utils import visualize_hem_compare, window_by_date
 
 
@@ -70,7 +70,7 @@ def setup_parser(subparsers):
 
 
 def execute(args):
-    model_dir: Path = TrainConfig.TensorBoardLogDir / args.model
+    model_dir: Path = TFDataConfig.TB_LOG_DIR / args.model
     if not model_dir.exists():
         print(
             f"Error: The specified model '{args.model}' does not exist in the log directory."
@@ -177,7 +177,7 @@ def execute(args):
         assert (
             hem_denorm_prediction.shape == hem_denorm_truth.shape
             and hem_denorm_prediction.shape
-            == (TrainConfig.HEM_WINDOW_SIZE, *MOSDACConfig.FRAME_SIZE)
+            == (TFDataConfig.HEM_WINDOW_SIZE, *MOSDACConfig.FRAME_SIZE)
         )
 
         fig = visualize_hem_compare(
