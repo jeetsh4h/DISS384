@@ -66,49 +66,19 @@ def weighted_denorm_rmse(y_true, y_pred):
 
 @K.utils.register_keras_serializable()
 def weighted_pixel_loss(y_true, y_pred):
-    """
-    A loss function specifically designed for rainfall prediction that:
-    1. Focuses more on non-zero rainfall pixels
-    2. Penalizes underestimation of high rainfall values more severely
-    3. Applies progressive weighting based on true rainfall intensity
-
-    Args:
-        y_true: tf.Tensor - Normalized true rainfall values
-        y_pred: tf.Tensor - Normalized predicted rainfall values
-
-    Returns:
-        tf.Tensor - A weighted, asymmetric loss that can be used during model training
-    """
     y_true_denorm = hem_denormalize(y_true)
     y_pred_denorm = hem_denormalize(y_pred)
 
-    non_zero_mask = y_true_denorm > TFDataConfig.TOLERANCE
-
     diff = y_true_denorm - y_pred_denorm
-
-    # Create asymmetric weighting: penalize underestimation more
-    # When diff > 0, model underestimated (y_true > y_pred)
-    # underestimation_mask = diff > 0
 
     # Create weights based on the true rainfall intensity
     # Higher rainfall values get exponentially higher weights
-    intensity_weights = tf.pow(y_true_denorm, 1.5)
-
-    # Combine different weights:
-    # 1. Base weight: 1.0 for all pixels
-    # 2. Non-zero areas get additional weight of 2.0
-    # # 3. Underestimated areas get additional weight of 2.0
-    # 4. Multiply by intensity weights for progressive weighting
-    weights = (
-        1.0
-        + tf.cast(non_zero_mask, TFDataConfig.DTYPE) * 2.0  # type: ignore
-        # + tf.cast(underestimation_mask, TFDataConfig.DTYPE) * 2.0  # type: ignore
-    ) * intensity_weights  # TODO: check if I should multiply or add
+    intensity_weights = tf.pow(y_true_denorm, 2.0)
 
     # TODO: check if removing the root works better or worse?
     root_squared_error = tf.sqrt(tf.square(diff))
 
-    weighted_squared_error = weights * root_squared_error
+    weighted_squared_error = intensity_weights * root_squared_error
 
     return tf.reduce_mean(weighted_squared_error)
 
