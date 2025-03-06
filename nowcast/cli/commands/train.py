@@ -2,11 +2,11 @@ import json
 import tensorflow as tf
 from pathlib import Path
 
+from ...utils.model_utils import *
 from ...utils.models import encoder_decoder
 from ...config import TrainConfig, MOSDACConfig, TFDataConfig
 from ...utils.train_utils import model_callbacks, generate_log_dir
 from ...utils.data_loader import load_data_generator, create_windows
-from ...utils.model_utils import denorm_rmse, weighted_denorm_rmse, non_zero_denorm_rmse
 
 
 def setup_parser(subparsers):
@@ -114,8 +114,17 @@ def execute(args):
     # Compile the model with appropriate metrics
     model.compile(
         optimizer="adam",
-        loss=weighted_denorm_rmse,
-        metrics=[non_zero_denorm_rmse, denorm_rmse],
+        loss=frame_loss,
+        # loss=combined_loss,
+        # loss=weighted_pixel_loss,
+        metrics=[
+            weighted_denorm_rmse,
+            denorm_rmse,
+            non_zero_denorm_rmse,
+            weighted_pixel_loss,
+            # frame_loss,
+            # perceptual_loss,
+        ],
     )
 
     # Log directory for Model

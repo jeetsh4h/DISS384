@@ -2,6 +2,7 @@ import keras.api as K
 import tensorflow as tf
 
 from .normalize import hem_denormalize
+from ..config import TFDataConfig, MOSDACConfig
 
 
 @K.utils.register_keras_serializable()
@@ -12,9 +13,13 @@ def denorm_rmse(y_true, y_pred):
 
     Take the RMSE of the denormalized values.
     """
-    return tf.sqrt(
-        tf.reduce_mean(tf.square(hem_denormalize(y_true) - hem_denormalize(y_pred)))
-    )
+
+    y_true_denorm = hem_denormalize(y_true)
+    y_pred_denorm = hem_denormalize(y_pred)
+
+    diff = y_true_denorm - y_pred_denorm
+
+    return tf.sqrt(tf.reduce_mean(tf.square(diff)))
 
 
 @K.utils.register_keras_serializable()
@@ -25,12 +30,15 @@ def non_zero_denorm_rmse(y_true, y_pred):
 
     Take the RMSE of only the non-zero values, the RMSE is taken after denormalization.
     """
-    mask = y_true > 1e-6
-    return tf.sqrt(
-        tf.reduce_mean(
-            tf.square((hem_denormalize(y_true) - hem_denormalize(y_pred))[mask])
-        )
-    )
+
+    y_true_denorm = hem_denormalize(y_true)
+    y_pred_denorm = hem_denormalize(y_pred)
+
+    diff = y_true_denorm - y_pred_denorm
+
+    non_zero_mask = y_true_denorm > TFDataConfig.TOLERANCE
+
+    return tf.sqrt(tf.reduce_mean(tf.square(diff[non_zero_mask])))
 
 
 @K.utils.register_keras_serializable()
@@ -43,13 +51,127 @@ def weighted_denorm_rmse(y_true, y_pred):
     Again, only done after denormalization. The current weight distribution is
     80% for non-zero values and 20% for zero values.
     """
-    mask = y_true > 1e-6
-    return 0.80 * tf.sqrt(
-        tf.reduce_mean(
-            tf.square((hem_denormalize(y_true) - hem_denormalize(y_pred))[mask])
-        )
-    ) + 0.20 * tf.sqrt(
-        tf.reduce_mean(
-            tf.square((hem_denormalize(y_true) - hem_denormalize(y_pred))[~mask])
-        )
+    y_true_denorm = hem_denormalize(y_true)
+    y_pred_denorm = hem_denormalize(y_pred)
+
+    non_zero_mask = y_true_denorm > TFDataConfig.TOLERANCE
+
+    diff = y_true_denorm - y_pred_denorm
+
+    non_zero_rmse = tf.sqrt(tf.reduce_mean(tf.square(diff[non_zero_mask])))
+    zero_rmse = tf.sqrt(tf.reduce_mean(tf.square(diff[~non_zero_mask])))
+
+    return (0.80 * non_zero_rmse) + (0.20 * zero_rmse)
+
+
+@K.utils.register_keras_serializable()
+def weighted_pixel_loss(y_true, y_pred):
+    """
+    A loss function specifically designed for rainfall prediction that:
+    1. Focuses more on non-zero rainfall pixels
+    2. Penalizes underestimation of high rainfall values more severely
+    3. Applies progressive weighting based on true rainfall intensity
+
+    Args:
+        y_true: tf.Tensor - Normalized true rainfall values
+        y_pred: tf.Tensor - Normalized predicted rainfall values
+
+    Returns:
+        tf.Tensor - A weighted, asymmetric loss that can be used during model training
+    """
+    y_true_denorm = hem_denormalize(y_true)
+    y_pred_denorm = hem_denormalize(y_pred)
+
+    non_zero_mask = y_true_denorm > TFDataConfig.TOLERANCE
+
+    diff = y_true_denorm - y_pred_denorm
+
+    # Create asymmetric weighting: penalize underestimation more
+    # When diff > 0, model underestimated (y_true > y_pred)
+    # underestimation_mask = diff > 0
+
+    # Create weights based on the true rainfall intensity
+    # Higher rainfall values get exponentially higher weights
+    intensity_weights = tf.pow(y_true_denorm, 1.5)
+
+    # Combine different weights:
+    # 1. Base weight: 1.0 for all pixels
+    # 2. Non-zero areas get additional weight of 2.0
+    # # 3. Underestimated areas get additional weight of 2.0
+    # 4. Multiply by intensity weights for progressive weighting
+    weights = (
+        1.0
+        + tf.cast(non_zero_mask, TFDataConfig.DTYPE) * 2.0  # type: ignore
+        # + tf.cast(underestimation_mask, TFDataConfig.DTYPE) * 2.0  # type: ignore
+    ) * intensity_weights  # TODO: check if I should multiply or add
+
+    # TODO: check if removing the root works better or worse?
+    root_squared_error = tf.sqrt(tf.square(diff))
+
+    weighted_squared_error = weights * root_squared_error
+
+    return tf.reduce_mean(weighted_squared_error)
+
+
+@K.utils.register_keras_serializable()
+def frame_loss(y_true, y_pred):
+    total_loss = 0.0
+
+    # Process each frame in the sequence without unstacking batches
+    for y_true_batched_frame, y_pred_batched_frame in zip(
+        tf.unstack(y_true, axis=1), tf.unstack(y_pred, axis=1)  # type:ignore
+    ):
+        total_loss += weighted_pixel_loss(y_true_batched_frame, y_pred_batched_frame)
+
+    return total_loss
+
+
+################# TODO #################
+
+
+# TODO: fix perceptual loss and combined loss
+@K.utils.register_keras_serializable()
+def perceptual_loss(y_true, y_pred):
+    xception_base = K.applications.Xception(
+        False, input_shape=(*MOSDACConfig.FRAME_SIZE, 3)
     )
+
+    feature_extractor = K.models.Model(
+        inputs=xception_base.input,
+        outputs=xception_base.get_layer("block12_sepconv1_act").output,
+    )
+    feature_extractor.trainable = False
+
+    features_true = feature_extractor(tf.concat([y_true, y_true, y_true], axis=-1))
+    features_pred = feature_extractor(tf.concat([y_pred, y_pred, y_pred], axis=-1))
+
+    # RMSE of features
+    return tf.sqrt(K.losses.mean_squared_error(features_true, features_pred))
+
+
+@K.utils.register_keras_serializable()
+def combined_loss(y_true, y_pred):
+    # Initialize the total loss
+    total_loss = 0.0
+
+    # Alpha parameter to weight between pixel loss and perceptual loss
+    alpha = 0.7  # Adjust this value as needed
+
+    # Process each frame in the sequence without unstacking batches
+    for y_true_batched_frame, y_pred_batched_frame in zip(
+        tf.unstack(y_true, axis=1), tf.unstack(y_pred, axis=1)  # type:ignore
+    ):
+        frame_pixel_loss = weighted_pixel_loss(
+            y_true_batched_frame, y_pred_batched_frame
+        )
+        frame_perceptual_loss = perceptual_loss(
+            y_true_batched_frame, y_pred_batched_frame
+        )
+
+        # Combine losses for this frame
+        frame_loss = alpha * frame_pixel_loss + (1 - alpha) * frame_perceptual_loss
+
+        # Add to total loss (sum, not average)
+        total_loss += frame_loss
+
+    return total_loss

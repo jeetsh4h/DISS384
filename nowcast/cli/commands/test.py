@@ -118,3 +118,7 @@ def execute(args):
     )
     with open(test_dir / "metrics.json", "w") as f:
         json.dump(test_metrics, f, indent=4)
+
+
+# TODO: metrics to add when evaluating SSIM, RMSE, PSNR
+#       evaaluate timeframe-by-timeframe (leadtime) bar-chart

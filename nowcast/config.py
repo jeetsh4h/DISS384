@@ -1,4 +1,3 @@
-import numpy as np
 import datetime as dt
 import keras.api as K
 import tensorflow as tf
@@ -38,6 +37,8 @@ class TFDataConfig:
     DTYPE = tf.float32
     assert DTYPE.is_numpy_compatible, "DTYPE must be numpy compatible"
     K.config.set_dtype_policy(DTYPE.name)
+
+    TOLERANCE = 1e-6
 
 
 class TrainConfig:
