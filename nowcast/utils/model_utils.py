@@ -73,7 +73,7 @@ def weighted_pixel_loss(y_true, y_pred):
 
     # Create weights based on the true rainfall intensity
     # Higher rainfall values get exponentially higher weights
-    intensity_weights = tf.pow(y_true_denorm, 2.0)
+    intensity_weights = tf.maximum(tf.pow(y_true_denorm, 2.0), 1.0)
 
     # TODO: check if removing the root works better or worse?
     root_squared_error = tf.sqrt(tf.square(diff))
