@@ -114,15 +114,16 @@ def execute(args):
     # Compile the model with appropriate metrics
     model.compile(
         optimizer="adam",
-        loss=frame_loss,
+        loss=weighted_pixel_loss,
+        # loss=weighted_denorm_rmse,
         # loss=combined_loss,
-        # loss=weighted_pixel_loss,
+        # loss=frame_loss,
         metrics=[
-            weighted_denorm_rmse,
             denorm_rmse,
             non_zero_denorm_rmse,
-            weighted_pixel_loss,
-            # frame_loss,
+            frame_loss,
+            weighted_denorm_rmse,
+            # weighted_pixel_loss,
             # perceptual_loss,
         ],
     )
