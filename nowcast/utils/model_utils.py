@@ -84,64 +84,51 @@ def weighted_pixel_loss(y_true, y_pred):
 
 
 @K.utils.register_keras_serializable()
-def frame_loss(y_true, y_pred):
-    total_loss = 0.0
+class PerceptualLoss(K.losses.Loss):
+    def __init__(self, name="perceptual_loss", **kwargs):
+        super().__init__(name=name, **kwargs)
+        xception_base = K.applications.Xception(
+            False, input_shape=(*MOSDACConfig.FRAME_SIZE, 3)
+        )
 
-    # Process each frame in the sequence without unstacking batches
-    for y_true_batched_frame, y_pred_batched_frame in zip(
-        tf.unstack(y_true, axis=1), tf.unstack(y_pred, axis=1)  # type:ignore
-    ):
-        total_loss += weighted_pixel_loss(y_true_batched_frame, y_pred_batched_frame)
+        self.feature_extractor = K.models.Model(
+            inputs=xception_base.input,
+            outputs=xception_base.get_layer("block12_sepconv1_act").output,
+        )
+        self.feature_extractor.trainable = False
 
-    return total_loss
+    def call(self, y_true, y_pred):
+        features_true = self.feature_extractor(
+            tf.concat([y_true, y_true, y_true], axis=-1)
+        )
+        features_pred = self.feature_extractor(
+            tf.concat([y_pred, y_pred, y_pred], axis=-1)
+        )
 
-
-################# TODO #################
-
-
-# TODO: fix perceptual loss and combined loss
-@K.utils.register_keras_serializable()
-def perceptual_loss(y_true, y_pred):
-    xception_base = K.applications.Xception(
-        False, input_shape=(*MOSDACConfig.FRAME_SIZE, 3)
-    )
-
-    feature_extractor = K.models.Model(
-        inputs=xception_base.input,
-        outputs=xception_base.get_layer("block12_sepconv1_act").output,
-    )
-    feature_extractor.trainable = False
-
-    features_true = feature_extractor(tf.concat([y_true, y_true, y_true], axis=-1))
-    features_pred = feature_extractor(tf.concat([y_pred, y_pred, y_pred], axis=-1))
-
-    # RMSE of features
-    return tf.sqrt(K.losses.mean_squared_error(features_true, features_pred))
+        # MSE between features
+        return 5.0 * K.losses.mean_squared_error(features_true, features_pred)  # type: ignore
 
 
 @K.utils.register_keras_serializable()
-def combined_loss(y_true, y_pred):
-    # Initialize the total loss
-    total_loss = 0.0
+class CombinedLoss(K.losses.Loss):
+    def __init__(self, name="test_loss", **kwargs):
+        super().__init__(name=name, **kwargs)
+        self.perceptual_loss = PerceptualLoss()
 
-    # Alpha parameter to weight between pixel loss and perceptual loss
-    alpha = 0.7  # Adjust this value as needed
+    def call(self, y_true, y_pred):
+        total_loss = 0.0
 
-    # Process each frame in the sequence without unstacking batches
-    for y_true_batched_frame, y_pred_batched_frame in zip(
-        tf.unstack(y_true, axis=1), tf.unstack(y_pred, axis=1)  # type:ignore
-    ):
-        frame_pixel_loss = weighted_pixel_loss(
-            y_true_batched_frame, y_pred_batched_frame
-        )
-        frame_perceptual_loss = perceptual_loss(
-            y_true_batched_frame, y_pred_batched_frame
-        )
+        # Process each frame in the sequence without unstacking batches
+        for y_true_batched_frame, y_pred_batched_frame in zip(
+            tf.unstack(y_true, axis=1), tf.unstack(y_pred, axis=1)  # type:ignore
+        ):
+            frame_perceptual_loss = self.perceptual_loss(
+                y_true_batched_frame, y_pred_batched_frame
+            )
+            frame_pixel_loss = weighted_denorm_rmse(
+                y_true_batched_frame, y_pred_batched_frame
+            )
 
-        # Combine losses for this frame
-        frame_loss = alpha * frame_pixel_loss + (1 - alpha) * frame_perceptual_loss
+            total_loss += frame_perceptual_loss + frame_pixel_loss  # type: ignore
 
-        # Add to total loss (sum, not average)
-        total_loss += frame_loss
-
-    return total_loss
+        return total_loss
