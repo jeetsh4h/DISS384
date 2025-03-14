@@ -1,7 +1,7 @@
 import sys
 import argparse
 
-from .commands import cache, train, visualize, test
+from .commands import cache, train, visualize, test, metrics
 
 
 def main():
@@ -24,6 +24,7 @@ def main():
     train_parser = train.setup_parser(subparsers)
     visualize_parser = visualize.setup_parser(subparsers)
     test_parser = test.setup_parser(subparsers)
+    metric_parser = metrics.setup_parser(subparsers)
 
     # Parse arguments
     args = parser.parse_args()
@@ -43,10 +44,12 @@ def main():
             return visualize.execute(args)
         case "test":
             return test.execute(args)
-
-    # Command not recognized
-    print(f"Error: Unknown command '{args.command}'")
-    return 1
+        case "metrics":
+            return metrics.execute(args)
+        case _:
+            print(f"Error: Unknown command '{args.command}'")
+            parser.print_help()
+            return 1
 
 
 if __name__ == "__main__":

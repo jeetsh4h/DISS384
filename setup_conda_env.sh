@@ -81,7 +81,7 @@ echo "  - Deactivate: conda deactivate"
 
 # Install additional scientific packages
 echo "Installing additional scientific packages..."
-pip install scipy matplotlib numpy
+pip install scipy matplotlib numpy scikit-image
 
 echo "Verifying additional packages..."
 python -c "
