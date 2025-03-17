@@ -1,29 +1,31 @@
 import json
-import keras.api as K
 import datetime as dt
 from pathlib import Path
 from pprint import pprint
 
+from nowcast.utils.normalize import hem_denormalize
+
 from ...utils.metric_utils import *
-from ...config import TestConfig, TFDataConfig
+from ...utils.flow_utils import flow_predict
+from ...config import TFDataConfig, TestConfig
 from ...utils.data_loader import create_windows, load_data_generator
 
 
 def setup_parser(subparsers):
-    metrics_parser = subparsers.add_parser(
-        "metrics",
-        help="Calculate metrics for a model on a set of test data.",
+    flow_parser = subparsers.add_parser(
+        "flow",
+        help="Nowcast HEM using optical flow. Do nowcasting that directly corresponds to what one model is doing. Calulating baseline metrics for a model.",
     )
 
-    metrics_parser.add_argument(
+    flow_parser.add_argument(
         "--model",
         "-m",
         type=str,
         required=True,
-        help="The model to test, from the log directory only (for now).",
+        help="The model to compare baseline with, from the log directory only (for now).",
     )
 
-    metrics_parser.add_argument(
+    flow_parser.add_argument(
         "--metric",
         "-me",
         nargs="+",
@@ -33,22 +35,14 @@ def setup_parser(subparsers):
         help="One or more metric names to compute.",
     )
 
-    metrics_parser.add_argument(
-        "--batch-size",
-        "-b",
-        type=int,
-        default=8,
-        help="Batch size for evaluating",
-    )
-
-    metrics_parser.add_argument(
+    flow_parser.add_argument(
         "--offset",
         "-no",
         type=int,
         help="The offset at which HEM is nowcasted from the input OLR. Will be taken from the model's directory name if not provided.",
     )
 
-    return metrics_parser
+    return flow_parser
 
 
 def execute(args):
@@ -80,28 +74,22 @@ def execute(args):
     assert offset is not None
 
     test_window_fns, test_window_timestamps = create_windows(
-        TestConfig.TEST_START_DT,
-        TestConfig.TEST_END_DT,
-        offset,
+        TestConfig.TEST_START_DT, TestConfig.TEST_END_DT, offset, hem_as_input=True
     )
-    # TODO: wrap with tf.data API, if possible
-    metric_gen = load_data_generator(
+    flow_gen = load_data_generator(
         test_window_fns,
         test_window_timestamps,
-        args.batch_size,
+        batch_size=1,
         shuffle=False,
         yield_batch_ts=True,
     )
 
-    loaded_model = K.models.load_model(
-        model_path
-    )  # type: K.models.Model  # type: ignore
-
-    metric_dir: Path = model_dir / "metrics"
-    metric_dir.mkdir(exist_ok=True)
-
     if args.metric == ["all"]:
-        args.metric = ["rmse", "ssim", "mse", "mae", "psnr", "corrcoef"]
+        # args.metric = ["rmse", "corrcoef", "ssim", "mse", "mae", "psnr"]
+        args.metric = ["mse", "rmse", "mae"]
+
+    flow_dir: Path = model_dir / "flow"
+    flow_dir.mkdir(exist_ok=True)
 
     metrics: dict[str, list[float]] = {
         metric: [
@@ -112,7 +100,7 @@ def execute(args):
     old_count = 0
     count = 0
     first_ts: dt.datetime | None = None
-    for x_olr, y_true, ts in metric_gen:  # type: ignore
+    for x_hem, y_true, ts in flow_gen:  # type: ignore
         if first_ts is None:
             first_ts = ts[0]
         else:
@@ -120,17 +108,20 @@ def execute(args):
                 break
 
         print(
-            f"\rProcessing batch with timestamp: {dt.datetime.strftime(ts[-1], '%d/%m/%Y, %H:%M:%S')}",
+            f"\rProcessing window with timestamp: {dt.datetime.strftime(ts[-1], '%d/%m/%Y, %H:%M:%S')}",
             end="",
             flush=True,
         )
-        y_pred = loaded_model.predict(x_olr, verbose="0")
+        x_hem_flow = hem_denormalize(x_hem[0, ..., 0])
+        y_true_flow = hem_denormalize(y_true[0, ..., 0])
+
+        y_pred = flow_predict(x_hem_flow, offset, ts[0])
 
         old_count = count
-        count += x_olr.shape[0]
+        count += x_hem.shape[0]
         for metric in metrics.keys():
-            frame_metrics = METRIC_FUNC_MAP[metric](
-                y_true, y_pred
+            frame_metrics = FLOW_METRIC_FUNC_MAP[metric](
+                y_true_flow, y_pred
             )  # frame-by-frame metric of batch, summed up
             for i, frame_metric in enumerate(frame_metrics):
                 # batch update of running mean
@@ -140,5 +131,5 @@ def execute(args):
 
     print()
     pprint(metrics)
-    with open(metric_dir / "metrics.json", "w") as f:
-        json.dump(metrics, f, indent=4)
+    with open(flow_dir / "flow_metrics.json", "w") as f:
+        json.dump(metrics, f)

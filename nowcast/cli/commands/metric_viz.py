@@ -1,3 +1,4 @@
+from email.policy import default
 from ...config import TFDataConfig
 from ...utils.metric_viz_utils import metric_graphs
 
@@ -15,6 +16,13 @@ def setup_parser(subparsers):
         type=str,
         required=True,
         help="The models used to build graph. Make sure that all the models provided have different offsets. Models will only be taken from the log directory.",
+    )
+
+    metric_viz_parser.add_argument(
+        "--flow",
+        type=bool,
+        default=False,
+        help="Whether to use flow metrics, or model metrics.",
     )
 
     return metric_viz_parser
@@ -51,7 +59,9 @@ def execute(args):
             "Error: The model directory names do not contain unique offsets."
         )
 
-    model_metrics_dir = [model_dir / "metrics" for model_dir in model_dirs]
+    model_metrics_dir = [
+        model_dir / ("metrics" if not args.flow else "flow") for model_dir in model_dirs
+    ]
     for model_metrics in model_metrics_dir:
         if not model_metrics.exists():
             print(
@@ -62,4 +72,4 @@ def execute(args):
     # saves the figures in the log directory.
     # in the folder named `metric_viz_date_time`
     #
-    metric_graphs(model_metrics_dir, offsets)
+    metric_graphs(model_metrics_dir, offsets, args.flow)

@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from ..config import TFDataConfig
 
 
-def metric_graphs(metric_dirs, offsets):
+def metric_graphs(metric_dirs, offsets, flow=False):
     # Load the metrics
     metrics = []
     for metric_dir in metric_dirs:
@@ -17,9 +17,9 @@ def metric_graphs(metric_dirs, offsets):
                     metric.keys()
                 ), "Models have different metrics trained."
 
-    output_dir = (
-        TFDataConfig.TB_LOG_DIR
-        / f"metric_viz_{dt.datetime.now(dt.timezone(dt.timedelta(hours=5, minutes=30))).strftime('%Y%m%d-%H%M%S')}"
+    metric_viz_dir_name = f"metric_viz_{dt.datetime.now(dt.timezone(dt.timedelta(hours=5, minutes=30))).strftime('%Y%m%d-%H%M%S')}"
+    output_dir = TFDataConfig.TB_LOG_DIR / (
+        metric_viz_dir_name if not flow else f"{metric_viz_dir_name}_flow"
     )
     output_dir.mkdir()
 
@@ -41,7 +41,7 @@ def metric_graphs(metric_dirs, offsets):
             y += all_metric[metric]
 
         fig, ax = plt.subplots(figsize=(10, 6))
-        ax.plot(x, y, marker="o")
+        ax.plot(x, y, marker=("b-o" if not flow else "r-s"))
         ax.set_title(f"{metric.upper()}")
 
         x_labels = [f"{int(x_val * 30)} mins" for x_val in x]

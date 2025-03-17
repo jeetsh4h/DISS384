@@ -95,3 +95,75 @@ METRIC_FUNC_MAP = {
     "psnr": psnr_frame,
     "corrcoef": corrcoef_frame,
 }
+
+
+def flow_mse_frame(y_true, y_pred):
+    batch_metric = [0.0 for _ in range(TFDataConfig.HEM_WINDOW_SIZE)]
+    for i, (true_frame, pred_frame) in enumerate(zip(y_true, y_pred)):
+        batch_metric[i] += np.nanmean((true_frame - pred_frame) ** 2)
+    return batch_metric
+
+
+def flow_rmse_frame(y_true, y_pred):
+    mse_metrics = flow_mse_frame(y_true, y_pred)
+    return [metric**0.5 for metric in mse_metrics]
+
+
+def flow_mae_frame(y_true, y_pred):
+    batch_metric = [0.0 for _ in range(TFDataConfig.HEM_WINDOW_SIZE)]
+    for i, (true_frame, pred_frame) in enumerate(zip(y_true, y_pred)):
+        batch_metric[i] += np.nanmean(np.abs(true_frame - pred_frame))
+    return batch_metric
+
+
+def flow_ssim_frame(y_true, y_pred):
+    batch_metric = [0.0 for _ in range(TFDataConfig.HEM_WINDOW_SIZE)]
+    for i, (true_frame, pred_frame) in enumerate(zip(y_true, y_pred)):
+        batch_metric[i] += ssim(
+            true_frame,
+            pred_frame,
+            data_range=HEMConfig.MAX - HEMConfig.MIN,
+            channel_axis=-1,
+        )  # type: ignore
+    return batch_metric
+
+
+def flow_psnr_frame(y_true, y_pred):
+    batch_metric = [0.0 for _ in range(TFDataConfig.HEM_WINDOW_SIZE)]
+    for i, (true_frame, pred_frame) in enumerate(zip(y_true, y_pred)):
+        mse = np.nanmean((true_frame - pred_frame) ** 2)
+        data_range = HEMConfig.MAX - HEMConfig.MIN
+        batch_metric[i] += (
+            20 * np.log10(data_range) - 10 * np.log10(mse) if mse > 0 else 100
+        )
+    return batch_metric
+
+
+def flow_corrcoef_frame(y_true, y_pred):
+    batch_metric = [0.0 for _ in range(TFDataConfig.HEM_WINDOW_SIZE)]
+    for i, (true_frame, pred_frame) in enumerate(zip(y_true, y_pred)):
+        true_flat = true_frame.flatten()
+        pred_flat = pred_frame.flatten()
+
+        # Check if either array has zero standard deviation
+        std_true = np.nanstd(true_flat)
+        std_pred = np.nanstd(pred_flat)
+
+        if std_true == 0 or std_pred == 0:
+            # If both arrays are identical constants, correlation is 1
+            # Otherwise, correlation is 0
+            if std_true == 0 and std_pred == 0 and np.array_equal(true_flat, pred_flat):
+                batch_metric[i] += 1.0
+            else:
+                batch_metric[i] += 0.0
+        else:
+            batch_metric[i] += np.corrcoef(true_flat, pred_flat)[0, 1]
+    return batch_metric
+
+
+# TODO: add the other metrics
+FLOW_METRIC_FUNC_MAP = {
+    "mse": flow_mse_frame,
+    "rmse": flow_rmse_frame,
+    "mae": flow_mae_frame,
+}

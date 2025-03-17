@@ -74,10 +74,14 @@ def load_data_generator(
                 yield x_batch, y_batch
 
 
+# TODO: rewrite the docstring
+#       refactor it so that it makes more sense when reading it
+#       make sure there is consistency in the variable naming
 def create_windows(
     start_time: dt.datetime,
     end_time: dt.datetime,
     hem_nowcast_offset: int,
+    hem_as_input: bool = False,
 ) -> tuple[list[list[str]], list[dt.datetime]]:
     """
     Create input-output window pairs for training the model.
@@ -102,35 +106,42 @@ def create_windows(
     """
     olr_frame_fns, hem_frame_fns, frame_timestamps = _corr_fn_ts(start_time, end_time)
 
-    olr_window_size = TFDataConfig.OLR_WINDOW_SIZE
-    hem_window_size = TFDataConfig.HEM_WINDOW_SIZE
+    inp_frame_fns = olr_frame_fns if not hem_as_input else hem_frame_fns
+    out_frame_fns = hem_frame_fns
+
+    inp_window_size = (
+        TFDataConfig.OLR_WINDOW_SIZE
+        if not hem_as_input
+        else TFDataConfig.HEM_WINDOW_SIZE
+    )
+    out_window_size = TFDataConfig.HEM_WINDOW_SIZE
 
     window_fns: list[list[str]] = []
     window_timestamps: list[dt.datetime] = []
 
     # We need enough frames to create a complete window
     for i in range(len(frame_timestamps)):
-        olr_timestamps = frame_timestamps[i : i + olr_window_size]
-        if not _check_ts_order(olr_timestamps):
+        inp_timestamps = frame_timestamps[i : i + inp_window_size]
+        if not _check_ts_order(inp_timestamps):
             continue
 
-        olr_files = olr_frame_fns[i : i + olr_window_size]
+        inp_files = inp_frame_fns[i : i + inp_window_size]
 
         # Start HEM frames after OLR window, offset by hem_nowcast_offset
-        hem_start_idx = i + olr_window_size + hem_nowcast_offset
-        hem_end_idx = hem_start_idx + hem_window_size
+        hem_start_idx = i + inp_window_size + hem_nowcast_offset
+        hem_end_idx = hem_start_idx + out_window_size
 
         # Check if we have enough frames left
-        if hem_end_idx > len(hem_frame_fns):
+        if hem_end_idx > len(out_frame_fns):
             continue
 
-        hem_timestamps = frame_timestamps[hem_start_idx:hem_end_idx]
-        if not _check_ts_order(hem_timestamps):
+        out_timestamps = frame_timestamps[hem_start_idx:hem_end_idx]
+        if not _check_ts_order(out_timestamps):
             continue
 
-        hem_files = hem_frame_fns[hem_start_idx:hem_end_idx]
+        out_files = out_frame_fns[hem_start_idx:hem_end_idx]
 
-        window_fns.append(olr_files + hem_files)
+        window_fns.append(inp_files + out_files)
         window_timestamps.append(frame_timestamps[i])
 
     return window_fns, window_timestamps

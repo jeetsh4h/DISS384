@@ -28,6 +28,11 @@ class MOSDACConfig:
     )
 
 
+class FlowConfig:
+    FLOW_CACHE_DIR = DataConfig.CACHE_DIR / "HEM_flow"
+    FLOW_FILENAME_FMT = "%Y%b%d_%H%M_3DIMG_HEM_flow.npy"
+
+
 class TFDataConfig:
     OLR_WINDOW_SIZE = 4
     HEM_WINDOW_SIZE = 4
@@ -51,7 +56,7 @@ class TrainConfig:
 
 class TestConfig:
     TEST_START_DT = dt.datetime(2022, 7, 1, 0, 0)
-    TEST_END_DT = dt.datetime(2022, 7, 31, 23, 59)
+    TEST_END_DT = dt.datetime(2022, 8, 31, 23, 59)
 
 
 class OLRConfig:

@@ -81,15 +81,23 @@ echo "  - Deactivate: conda deactivate"
 
 # Install additional scientific packages
 echo "Installing additional scientific packages..."
-pip install scipy matplotlib numpy scikit-image
+pip install scipy matplotlib numpy scikit-image pysteps opencv-contrib-python-headless
 
+# TODO: Check if the implicit newline works or not
 echo "Verifying additional packages..."
 python -c "
-import numpy as np
-import scipy as sp
+import scipy
 import matplotlib as mpl
+import numpy as np
+import skimage
+import pysteps
+import cv2
+import pysteps
 print('\nAdditional packages:')
-print(f'NumPy version: {np.__version__}')
-print(f'SciPy version: {sp.__version__}')
+print(f'SciPy version: {scipy.__version__}')
 print(f'Matplotlib version: {mpl.__version__}')
+print(f'NumPy version: {np.__version__}')
+print(f'SciKit-Image version: {skimage.__version__}')
+print(f'PySTEPS version: {pysteps.__version__}')
+print(f'OpenCV version: {cv2.__version__}')
 "
