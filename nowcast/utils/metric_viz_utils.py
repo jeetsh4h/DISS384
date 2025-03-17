@@ -9,7 +9,10 @@ def metric_graphs(metric_dirs, offsets, flow=False):
     # Load the metrics
     metrics = []
     for metric_dir in metric_dirs:
-        with open(metric_dir / "metrics.json", "r") as f:
+        metric_file = metric_dir = metric_dir / (
+            "metrics.json" if not flow else "flow_metrics.json"
+        )
+        with open(metric_file, "r") as f:
             metric = json.load(f)
             metrics.append(metric)
             if metrics:
@@ -41,7 +44,7 @@ def metric_graphs(metric_dirs, offsets, flow=False):
             y += all_metric[metric]
 
         fig, ax = plt.subplots(figsize=(10, 6))
-        ax.plot(x, y, marker=("b-o" if not flow else "r-s"))
+        ax.plot(x, y, ("b-o" if not flow else "r-s"))
         ax.set_title(f"{metric.upper()}")
 
         x_labels = [f"{int(x_val * 30)} mins" for x_val in x]

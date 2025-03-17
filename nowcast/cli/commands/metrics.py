@@ -124,6 +124,7 @@ def execute(args):
             end="",
             flush=True,
         )
+        # TODO: model_predict function with caching
         y_pred = loaded_model.predict(x_olr, verbose="0")
 
         old_count = count

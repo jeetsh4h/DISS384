@@ -7,7 +7,7 @@ from nowcast.utils.normalize import hem_denormalize
 
 from ...utils.metric_utils import *
 from ...utils.flow_utils import flow_predict
-from ...config import TFDataConfig, TestConfig
+from ...config import FlowConfig, TFDataConfig, TestConfig
 from ...utils.data_loader import create_windows, load_data_generator
 
 
@@ -46,6 +46,9 @@ def setup_parser(subparsers):
 
 
 def execute(args):
+    # check if flow (HEM) cache folder exists or not
+    FlowConfig.FLOW_CACHE_DIR.mkdir(exist_ok=True)
+
     model_dir: Path = TFDataConfig.TB_LOG_DIR / args.model
     if not model_dir.exists():
         print(
@@ -86,7 +89,7 @@ def execute(args):
 
     if args.metric == ["all"]:
         # args.metric = ["rmse", "corrcoef", "ssim", "mse", "mae", "psnr"]
-        args.metric = ["mse", "rmse", "mae"]
+        args.metric = ["mse", "rmse", "mae", "psnr"]
 
     flow_dir: Path = model_dir / "flow"
     flow_dir.mkdir(exist_ok=True)
@@ -97,8 +100,10 @@ def execute(args):
         ]  # frame-by-frame metric
         for metric in args.metric
     }
-    old_count = 0
-    count = 0
+    count = {
+        metric: [0 for _ in range(TFDataConfig.HEM_WINDOW_SIZE)]
+        for metric in args.metric
+    }
     first_ts: dt.datetime | None = None
     for x_hem, y_true, ts in flow_gen:  # type: ignore
         if first_ts is None:
@@ -117,19 +122,21 @@ def execute(args):
 
         y_pred = flow_predict(x_hem_flow, offset, ts[0])
 
-        old_count = count
-        count += x_hem.shape[0]
         for metric in metrics.keys():
             frame_metrics = FLOW_METRIC_FUNC_MAP[metric](
                 y_true_flow, y_pred
-            )  # frame-by-frame metric of batch, summed up
+            )  # frame-by-frame metric of batch
+
             for i, frame_metric in enumerate(frame_metrics):
-                # batch update of running mean
-                metrics[metric][i] = (
-                    (metrics[metric][i] * old_count) + float(frame_metric)
-                ) / count
+                if frame_metric is not None:
+                    count[metric][i] += 1
+                    metric_frame_count = count[metric][i]
+                    metrics[metric][i] = (
+                        metrics[metric][i] * (metric_frame_count - 1)
+                        + float(frame_metric)
+                    ) / metric_frame_count
 
     print()
     pprint(metrics)
     with open(flow_dir / "flow_metrics.json", "w") as f:
-        json.dump(metrics, f)
+        json.dump(metrics, f, indent=4)

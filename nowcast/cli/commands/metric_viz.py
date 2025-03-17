@@ -22,7 +22,7 @@ def setup_parser(subparsers):
         "--flow",
         type=bool,
         default=False,
-        help="Whether to use flow metrics, or model metrics.",
+        help="Whether to use flow metrics, or model metrics. Model metrics by default",
     )
 
     return metric_viz_parser
