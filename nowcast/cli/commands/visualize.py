@@ -4,10 +4,11 @@ import datetime as dt
 from pathlib import Path
 import matplotlib.pyplot as plt
 
-
-from ...utils.normalize import hem_denormalize
-from ...config import MOSDACConfig, TFDataConfig
+from ...utils.file_utils import find_by_date
+from ...utils.flow_utils import flow_predict
 from ...utils.viz_utils import visualize_hem_compare, window_by_date
+from ...config import DataConfig, HEMConfig, MOSDACConfig, TFDataConfig
+from ...utils.normalize import _fill_nans_with_interpolation, hem_denormalize
 
 
 def setup_parser(subparsers):
@@ -25,8 +26,8 @@ def setup_parser(subparsers):
         "--model",
         "-m",
         type=str,
-        required=True,
-        help="The model to visualize, from the log directory only (for now).",
+        default="none",
+        help="The model to visualize, from the log directory only (for now). Required unless --flow is provided.",
     )
 
     visualize_parser.add_argument(
@@ -47,7 +48,7 @@ def setup_parser(subparsers):
         "--offset",
         "-no",
         type=int,
-        help="The offset at which HEM is nowcasted from the input OLR. Will be taken from the model's directory name if not provided.",
+        help="The offset at which HEM is nowcasted from the input OLR. Will be taken from the model's directory name if not provided. Have to provide for flow",
     )
 
     visualize_parser.add_argument(
@@ -66,10 +67,22 @@ def setup_parser(subparsers):
         help="Use the checkpoint model instead of the final model.",
     )
 
+    visualize_parser.add_argument(
+        "--flow",
+        action="store_true",
+        help="Visualize flow predictions. Offsets are necessary for this to work; even if model name is provided. Figures get saved in the flow_figures directory in the logs.",
+    )
+
     return visualize_parser
 
 
 def execute(args):
+    if args.flow:
+        execute_flow(args)
+
+    if args.model == "none":
+        return 0
+
     model_dir: Path = TFDataConfig.TB_LOG_DIR / args.model
     if not model_dir.exists():
         print(
@@ -185,6 +198,99 @@ def execute(args):
         )
 
         fig.savefig(fig_dir / f"{date.strftime('%Y-%m-%d_%H:%M')}.png")
+        plt.close(fig)
+
+
+def execute_flow(args):
+    if args.offset is None:
+        raise ValueError("Error: Offset is required for visualizing flow predictions.")
+
+    figures_dir = TFDataConfig.TB_LOG_DIR / "flow_figures" / f"offset_{args.offset}"
+    figures_dir.mkdir(parents=True, exist_ok=True)
+
+    dates: list[dt.datetime] = []
+    if (args.dates is not None) and (args.date_ranges is not None):
+        raise ValueError(
+            "Error: Both dates and date ranges cannot be provided at the same time."
+        )
+
+    if args.dates is not None:
+        for date_str in args.dates:
+            try:
+                parsed_date = dt.datetime.strptime(date_str, "%Y-%m-%d_%H:%M")
+            except:
+                raise ValueError(
+                    f"Error: Invalid date format '{date_str}'. Use 'YYYY-MM-DD_HH:MM'."
+                )
+            dates.append(_round_to_next_30_minute_mark(parsed_date))
+
+    if args.date_ranges is not None:
+        for date_range in args.date_ranges:
+            try:
+                start_date, end_date = parse_date_range(date_range)
+            except ValueError as e:
+                raise ValueError(f"Error: {str(e)}")
+
+            # Use the function
+            current_date = _round_to_next_30_minute_mark(start_date)
+
+            while current_date <= end_date:
+                dates.append(current_date)
+                current_date += dt.timedelta(minutes=30)
+
+    assert dates
+
+    for date in dates:
+        try:
+            hem_fn, hem_ts = find_by_date(
+                date,
+                date
+                + dt.timedelta(minutes=30 * (TFDataConfig.HEM_WINDOW_SIZE))
+                + dt.timedelta(
+                    minutes=30 * (args.offset + TFDataConfig.HEM_WINDOW_SIZE - 1)
+                ),
+                str(DataConfig.CACHE_DIR / "HEM"),
+                str(DataConfig.NP_FILENAME_FMT).replace("%s", "HEM", 1),
+                "npy",
+                30,
+                0,
+                False,
+            )
+
+        except OSError:
+            continue
+
+        inp_window_fn = hem_fn[: TFDataConfig.HEM_WINDOW_SIZE]
+        out_window_fn = hem_fn[TFDataConfig.HEM_WINDOW_SIZE + args.offset :]
+
+        if None in inp_window_fn or None in out_window_fn:
+            continue
+
+        inp_window = [
+            np.clip(
+                (_fill_nans_with_interpolation(np.load(fn))),  # type: ignore
+                HEMConfig.MIN,
+                HEMConfig.MAX,
+            )
+            for fn in inp_window_fn
+        ]
+        out_window = [
+            np.clip(
+                (_fill_nans_with_interpolation(np.load(fn))),  # type: ignore
+                HEMConfig.MIN,
+                HEMConfig.MAX,
+            )
+            for fn in out_window_fn
+        ]
+
+        x_window = np.array(inp_window)
+        y_window = np.array(out_window)
+
+        y_pred = flow_predict(x_window, args.offset, date)
+
+        fig = visualize_hem_compare(y_pred, y_window, date, args.offset)
+
+        fig.savefig(figures_dir / f"{date.strftime('%Y-%m-%d_%H:%M')}.png")
         plt.close(fig)
 
 
