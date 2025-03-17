@@ -53,7 +53,6 @@ def psnr_frame(y_true, y_pred):
     return batch_metric
 
 
-#  TODO: fix the nan issue
 def corrcoef_frame(y_true, y_pred):
     denorm_true = hem_denormalize(y_true)
     denorm_pred = hem_denormalize(y_pred)
@@ -62,7 +61,24 @@ def corrcoef_frame(y_true, y_pred):
         for i, (true_frame, pred_frame) in enumerate(zip(batch_true, batch_pred)):
             true_flat = true_frame.flatten()
             pred_flat = pred_frame.flatten()
-            batch_metric[i] += np.corrcoef(true_flat, pred_flat)[0, 1]
+
+            # Check if either array has zero standard deviation
+            std_true = np.std(true_flat)
+            std_pred = np.std(pred_flat)
+
+            if std_true == 0 or std_pred == 0:
+                # If both arrays are identical constants, correlation is 1
+                # Otherwise, correlation is 0
+                if (
+                    std_true == 0
+                    and std_pred == 0
+                    and np.array_equal(true_flat, pred_flat)
+                ):
+                    batch_metric[i] += 1.0
+                else:
+                    batch_metric[i] += 0.0
+            else:
+                batch_metric[i] += np.corrcoef(true_flat, pred_flat)[0, 1]
     return batch_metric
 
 

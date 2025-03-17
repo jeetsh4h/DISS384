@@ -146,7 +146,7 @@ def execute(args):
 
         assert (olr_norm_data is not None) and (hem_norm_data is not None)
 
-        hem_norm_prediction = loaded_model.predict(olr_norm_data[np.newaxis, ...], batch_size=1)  # type: ignore
+        hem_norm_prediction = loaded_model.predict(olr_norm_data[np.newaxis, ...], batch_size=1, verbose="0")  # type: ignore
 
         # log normalized prediction as an image
         if args.log_norm:

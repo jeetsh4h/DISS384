@@ -2,6 +2,7 @@ import json
 import keras.api as K
 import datetime as dt
 from pathlib import Path
+from pprint import pprint
 
 from ...config import TestConfig, TFDataConfig
 from ...utils.data_loader import create_windows, load_data_generator
@@ -99,7 +100,7 @@ def execute(args):
     metric_dir.mkdir(exist_ok=True)
 
     if args.metric == ["all"]:
-        args.metric = ["rmse", "ssim", "mse", "mae", "psnr"]
+        args.metric = ["rmse", "ssim", "mse", "mae", "psnr", "corrcoef"]
 
     metrics: dict[str, list[float]] = {
         metric: [
@@ -136,6 +137,7 @@ def execute(args):
                     (metrics[metric][i] * old_count) + float(frame_metric)
                 ) / count
 
-    print(metrics)
+    print()
+    pprint(metrics)
     with open(metric_dir / "metrics.json", "w") as f:
         json.dump(metrics, f, indent=4)
