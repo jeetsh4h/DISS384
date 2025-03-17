@@ -1,9 +1,11 @@
 import json
 import tensorflow as tf
 from pathlib import Path
+import matplotlib.pyplot as plt
 
 from ...utils.model_utils import *
 from ...utils.models import encoder_decoder
+from ...utils.metric_viz_utils import training_graphs
 from ...config import TrainConfig, MOSDACConfig, TFDataConfig
 from ...utils.train_utils import model_callbacks, generate_log_dir
 from ...utils.data_loader import load_data_generator, create_windows
@@ -51,6 +53,14 @@ def setup_parser(subparsers):
         help="Directory to save TensorBoard logs. To view the board, run `tensorboard --logdir <logdir>`",
     )
 
+    # TODO: for the future, visualize right after training.
+    train_parser.add_argument(
+        "--train_metric_viz",
+        "-tm",
+        type=str,
+        help="This can be run for a model after the training has occurred. Currently taking the model log directory as input, and outputting the loss graph across the epochs (for training and validation data).\nRemember to add offset, it will glean the offset from the logdir name, it will throw an error if not provided, or it does not match. Can NOT train a model and visualize metrics, have to train model first.",
+    )
+
     return train_parser
 
 
@@ -58,6 +68,35 @@ def execute(args):
     epochs = args.epochs
     batch_size = args.batch_size
     offset = args.offset
+
+    if args.train_metric_viz:
+        model_train_dir = TFDataConfig.TB_LOG_DIR / args.train_metric_viz
+        if not model_train_dir.exists():
+            print(
+                f"Error: The specified model '{args.train_metric_viz}' does not exist in the log directory."
+            )
+            return 1
+
+        assert offset == int(
+            args.train_metric_viz.split("_")[-1]
+        ), "Offset does not match the model directory name."
+
+        model_train_metric_path = model_train_dir / "training_history.json"
+        if not model_train_metric_path.exists():
+            print(
+                f"Error: The specified model '{args.train_metric_viz}' does not contain training metrics."
+            )
+            return 1
+
+        training_history = None
+        with open(model_train_metric_path, "r") as f:
+            training_history = json.load(f)
+
+        graph = training_graphs(training_history, offset)
+        graph.savefig(model_train_dir / "loss_metrics.png")
+        plt.close(graph)
+
+        return 0
 
     train_window_fns, train_window_timestamps = create_windows(
         TrainConfig.TRAIN_START_DT,

@@ -61,7 +61,7 @@ def visualize_hem_compare(y_pred, y_true, date, offset):
     fig = plt.figure(figsize=(int((TFDataConfig.HEM_WINDOW_SIZE * 3.2) + 0.4), 7.0))
     # Adding the main title at the bottom of the figure
     fig.suptitle(
-        f"Prediction Comparison for {offset} hours offset",
+        f"Prediction Comparison for {offset * 0.5} hours offset",
         fontsize=20,
         y=0.02,
         verticalalignment="bottom",

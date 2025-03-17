@@ -55,3 +55,25 @@ def metric_graphs(metric_dirs, offsets):
 
         fig.savefig(output_dir / f"{metric}.png")
         plt.close(fig)
+
+
+def training_graphs(history, offset):
+    loss = history["loss"]
+    val_loss = history["val_loss"]
+
+    assert len(loss) == len(val_loss)
+
+    epochs = range(1, len(loss) + 1)
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+    ax.plot(epochs, loss, "b-o", label="Training loss")
+    ax.plot(epochs, val_loss, "r-s", label="Validation loss")
+    ax.set_title(f"Loss (nowcast offset of {(offset * 0.5):.0f} hours)")
+    ax.set_xlabel("Epochs")
+    ax.set_ylabel("Loss")
+    ax.legend()
+    ax.grid(True)
+    ax.set_xticks(epochs)
+    fig.tight_layout()
+
+    return fig
