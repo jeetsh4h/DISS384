@@ -7,8 +7,8 @@ import matplotlib.pyplot as plt
 from ...utils.file_utils import find_by_date
 from ...utils.flow_utils import flow_predict
 from ...utils.viz_utils import visualize_hem_compare, window_by_date
-from ...config import DataConfig, HEMConfig, MOSDACConfig, TFDataConfig
 from ...utils.normalize import _fill_nans_with_interpolation, hem_denormalize
+from ...config import DataConfig, FlowConfig, HEMConfig, MOSDACConfig, TFDataConfig
 
 
 def setup_parser(subparsers):
@@ -202,6 +202,9 @@ def execute(args):
 
 
 def execute_flow(args):
+    # check if flow (HEM) cache folder exists or not
+    FlowConfig.FLOW_CACHE_DIR.mkdir(exist_ok=True)
+
     if args.offset is None:
         raise ValueError("Error: Offset is required for visualizing flow predictions.")
 
@@ -241,6 +244,7 @@ def execute_flow(args):
     assert dates
 
     for date in dates:
+        print(f"\rProcessing {date.strftime('%Y-%m-%d %H:%M')}...", end="")
         try:
             hem_fn, hem_ts = find_by_date(
                 date,
@@ -292,6 +296,8 @@ def execute_flow(args):
 
         fig.savefig(figures_dir / f"{date.strftime('%Y-%m-%d_%H:%M')}.png")
         plt.close(fig)
+
+    print()
 
 
 def parse_date(date_str: str, start_date: bool) -> dt.datetime:

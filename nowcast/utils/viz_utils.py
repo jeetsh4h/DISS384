@@ -57,6 +57,7 @@ def window_by_date(date: dt.datetime, offset: int):
     return olr_norm_data, hem_norm_data
 
 
+# TODO: Add flow prediction or model prediction in title
 def visualize_hem_compare(y_pred, y_true, date, offset):
     fig = plt.figure(figsize=(int((TFDataConfig.HEM_WINDOW_SIZE * 3.2) + 0.4), 7.0))
     # Adding the main title at the bottom of the figure

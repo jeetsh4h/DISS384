@@ -3,12 +3,12 @@ import datetime as dt
 from pathlib import Path
 from pprint import pprint
 
-from nowcast.utils.normalize import hem_denormalize
 
 from ...utils.metric_utils import *
 from ...utils.flow_utils import flow_predict
-from ...config import FlowConfig, TFDataConfig, TestConfig
-from ...utils.data_loader import create_windows, load_data_generator
+from ...utils.file_utils import find_by_date
+from ...utils.normalize import _fill_nans_with_interpolation
+from ...config import DataConfig, FlowConfig, TFDataConfig, TestConfig
 
 
 def setup_parser(subparsers):
@@ -76,17 +76,6 @@ def execute(args):
 
     assert offset is not None
 
-    test_window_fns, test_window_timestamps = create_windows(
-        TestConfig.TEST_START_DT, TestConfig.TEST_END_DT, offset, hem_as_input=True
-    )
-    flow_gen = load_data_generator(
-        test_window_fns,
-        test_window_timestamps,
-        batch_size=1,
-        shuffle=False,
-        yield_batch_ts=True,
-    )
-
     if args.metric == ["all"]:
         # args.metric = ["rmse", "corrcoef", "ssim", "mse", "mae", "psnr"]
         args.metric = ["mse", "rmse", "mae", "psnr"]
@@ -104,23 +93,62 @@ def execute(args):
         metric: [0 for _ in range(TFDataConfig.HEM_WINDOW_SIZE)]
         for metric in args.metric
     }
-    first_ts: dt.datetime | None = None
-    for x_hem, y_true, ts in flow_gen:  # type: ignore
-        if first_ts is None:
-            first_ts = ts[0]
-        else:
-            if first_ts in ts:
-                break
 
-        print(
-            f"\rProcessing window with timestamp: {dt.datetime.strftime(ts[-1], '%d/%m/%Y, %H:%M:%S')}",
-            end="",
-            flush=True,
-        )
-        x_hem_flow = hem_denormalize(x_hem[0, ..., 0])
-        y_true_flow = hem_denormalize(y_true[0, ..., 0])
+    dates = []
+    curr_date = TestConfig.TEST_START_DT
+    assert curr_date.minute == 30 or curr_date.minute == 0
+    while curr_date <= TestConfig.TEST_END_DT:
+        dates.append(curr_date)
+        curr_date += dt.timedelta(minutes=30)
 
-        y_pred = flow_predict(x_hem_flow, offset, ts[0])
+    for date in dates:
+        print(f"\rProcessing {date.strftime('%Y-%m-%d %H:%M')}...", end="")
+        try:
+            hem_fn, hem_ts = find_by_date(
+                date,
+                date
+                + dt.timedelta(minutes=30 * (TFDataConfig.HEM_WINDOW_SIZE))
+                + dt.timedelta(
+                    minutes=30 * (offset + TFDataConfig.HEM_WINDOW_SIZE - 1)
+                ),
+                str(DataConfig.CACHE_DIR / "HEM"),
+                str(DataConfig.NP_FILENAME_FMT).replace("%s", "HEM", 1),
+                "npy",
+                30,
+                0,
+                False,
+            )
+
+        except OSError:
+            continue
+
+        inp_window_fn = hem_fn[: TFDataConfig.HEM_WINDOW_SIZE]
+        out_window_fn = hem_fn[TFDataConfig.HEM_WINDOW_SIZE + offset :]
+
+        if None in inp_window_fn or None in out_window_fn:
+            continue
+
+        inp_window = [
+            np.clip(
+                (_fill_nans_with_interpolation(np.load(fn))),  # type: ignore
+                HEMConfig.MIN,
+                HEMConfig.MAX,
+            )
+            for fn in inp_window_fn
+        ]
+        out_window = [
+            np.clip(
+                (_fill_nans_with_interpolation(np.load(fn))),  # type: ignore
+                HEMConfig.MIN,
+                HEMConfig.MAX,
+            )
+            for fn in out_window_fn
+        ]
+
+        x_hem_flow = np.array(inp_window)
+        y_true_flow = np.array(out_window)
+
+        y_pred = flow_predict(x_hem_flow, offset, date)
 
         for metric in metrics.keys():
             frame_metrics = FLOW_METRIC_FUNC_MAP[metric](
