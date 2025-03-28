@@ -84,6 +84,44 @@ def weighted_pixel_loss(y_true, y_pred):
 
 
 @K.utils.register_keras_serializable()
+def focal_loss(y_true, y_pred, gamma=2.0, alpha=0.25):
+    """
+    Focal Loss adapted for regression on satellite data.
+
+    This puts more focus on hard examples (high error) and can weight by rainfall intensity.
+    - gamma: focusing parameter, higher values increase focus on hard examples
+    - alpha: weighting factor for rainfall intensity
+    """
+    y_true_denorm = hem_denormalize(y_true)
+    y_pred_denorm = hem_denormalize(y_pred)
+
+    # Calculate absolute error
+    abs_error = tf.abs(y_true_denorm - y_pred_denorm)
+
+    # Create modulating factor based on error (smaller errors get reduced weight)
+    modulating_factor = tf.pow(abs_error, gamma)
+
+    # Weight by rainfall intensity (optional)
+    intensity_weights = tf.pow(y_true_denorm + 1.0, alpha)
+
+    # Combine weights and errors
+    weighted_errors = intensity_weights * modulating_factor * abs_error
+
+    return tf.reduce_mean(weighted_errors)
+
+
+@K.utils.register_keras_serializable()
+class FocalLoss(K.losses.Loss):
+    def __init__(self, gamma=2.0, alpha=0.25, name="focal_loss", **kwargs):
+        super().__init__(name=name, **kwargs)
+        self.gamma = gamma
+        self.alpha = alpha
+
+    def call(self, y_true, y_pred):
+        return focal_loss(y_true, y_pred, self.gamma, self.alpha)
+
+
+@K.utils.register_keras_serializable()
 class PerceptualLoss(K.losses.Loss):
     def __init__(self, name="perceptual_loss", **kwargs):
         super().__init__(name=name, **kwargs)
@@ -111,9 +149,13 @@ class PerceptualLoss(K.losses.Loss):
 
 @K.utils.register_keras_serializable()
 class CombinedLoss(K.losses.Loss):
-    def __init__(self, name="test_loss", **kwargs):
+    def __init__(
+        self, name="test_loss", use_focal=False, gamma=2.0, alpha=0.25, **kwargs
+    ):
         super().__init__(name=name, **kwargs)
         self.perceptual_loss = PerceptualLoss()
+        self.use_focal = use_focal
+        self.focal_loss = FocalLoss(gamma, alpha)
 
     def call(self, y_true, y_pred):
         total_loss = 0.0
@@ -125,10 +167,16 @@ class CombinedLoss(K.losses.Loss):
             frame_perceptual_loss = self.perceptual_loss(
                 y_true_batched_frame, y_pred_batched_frame
             )
-            frame_pixel_loss = weighted_denorm_rmse(
-                y_true_batched_frame, y_pred_batched_frame
-            )
 
-            total_loss += frame_perceptual_loss + frame_pixel_loss  # type: ignore
+            if self.use_focal:
+                frame_pixel_loss = self.focal_loss(
+                    y_true_batched_frame, y_pred_batched_frame
+                )
+                total_loss += frame_perceptual_loss + (0.01 * frame_pixel_loss)  # type: ignore
+            else:
+                frame_pixel_loss = weighted_denorm_rmse(
+                    y_true_batched_frame, y_pred_batched_frame
+                )
+                total_loss += frame_perceptual_loss + (2.0 * frame_pixel_loss)  # type: ignore
 
         return total_loss

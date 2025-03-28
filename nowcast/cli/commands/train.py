@@ -33,7 +33,7 @@ def setup_parser(subparsers):
         "--epochs",
         "-e",
         type=int,
-        default=16,
+        default=24,
         help="Number of epochs to train the model",
     )
 
@@ -152,16 +152,16 @@ def execute(args):
     # Compile the model with appropriate metrics
     model.compile(
         optimizer="adam",
+        loss=CombinedLoss(use_focal=True),
         # loss=weighted_pixel_loss,
         # loss=weighted_denorm_rmse,
         # loss=combined_loss,
         # loss=frame_loss,
-        loss=CombinedLoss(),
         metrics=[
             denorm_rmse,
             non_zero_denorm_rmse,
             weighted_denorm_rmse,
-            # PerceptualLoss(),
+            FocalLoss(),
             # frame_loss,
             # weighted_pixel_loss,
         ],
