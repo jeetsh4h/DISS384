@@ -53,7 +53,6 @@ def setup_parser(subparsers):
         help="Directory to save TensorBoard logs. To view the board, run `tensorboard --logdir <logdir>`",
     )
 
-    # TODO: for the future, visualize right after training.
     train_parser.add_argument(
         "--train_metric_viz",
         "-tm",
@@ -200,3 +199,7 @@ def execute(args):
 
     print(f"Model and training history saved to {logdir}")
     print(f"To view TensorBoard, run: `tensorboard --logdir {logdir}`")
+
+    graph = training_graphs(history_dict, offset)
+    graph.savefig(logdir / "loss_metrics.png")
+    plt.close(graph)
