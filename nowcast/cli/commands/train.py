@@ -152,7 +152,7 @@ def execute(args):
     # Compile the model with appropriate metrics
     model.compile(
         optimizer="adam",
-        loss=CombinedLoss(use_focal=True),
+        loss=CombinedLoss(),
         # loss=weighted_pixel_loss,
         # loss=weighted_denorm_rmse,
         # loss=combined_loss,
@@ -200,6 +200,9 @@ def execute(args):
     print(f"Model and training history saved to {logdir}")
     print(f"To view TensorBoard, run: `tensorboard --logdir {logdir}`")
 
+    # plot the loss graph
     graph = training_graphs(history_dict, offset)
     graph.savefig(logdir / "loss_metrics.png")
     plt.close(graph)
+
+    # TODO: plot the default figures
