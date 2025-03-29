@@ -113,7 +113,7 @@ def execute(args):
             if len(test_window_fns) % batch_size == 0
             else len(test_window_fns) // batch_size + 1
         ),
-        verbose="auto",
+        verbose="0",
         return_dict=True,
     )
     with open(test_dir / "metrics.json", "w") as f:
