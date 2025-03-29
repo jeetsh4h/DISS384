@@ -12,7 +12,7 @@ def encoder_decoder(
     # ENCODER
     # 1st ConvLSTM layer
     x = K.layers.ConvLSTM2D(
-        filters=128,
+        filters=64,
         kernel_size=(3, 3),
         padding="same",
         return_sequences=True,
@@ -23,7 +23,7 @@ def encoder_decoder(
 
     # 2nd ConvLSTM layer
     x = K.layers.ConvLSTM2D(
-        filters=256,
+        filters=128,
         kernel_size=(3, 3),
         padding="same",
         return_sequences=True,
@@ -34,7 +34,7 @@ def encoder_decoder(
 
     # 3rd ConvLSTM layer
     x = K.layers.ConvLSTM2D(
-        filters=512,
+        filters=256,
         kernel_size=(3, 3),
         padding="same",
         return_sequences=True,
@@ -46,7 +46,7 @@ def encoder_decoder(
     # DECODER
     # 1st ConvLSTM layer
     x = K.layers.ConvLSTM2D(
-        filters=512,
+        filters=256,
         kernel_size=(3, 3),
         padding="same",
         return_sequences=True,
@@ -57,7 +57,7 @@ def encoder_decoder(
 
     # 2nd ConvLSTM layer
     x = K.layers.ConvLSTM2D(
-        filters=256,
+        filters=128,
         kernel_size=(3, 3),
         padding="same",
         return_sequences=True,
@@ -68,7 +68,7 @@ def encoder_decoder(
 
     # 3rd ConvLSTM layer
     x = K.layers.ConvLSTM2D(
-        filters=128,
+        filters=64,
         kernel_size=(3, 3),
         padding="same",
         return_sequences=True,
@@ -79,7 +79,7 @@ def encoder_decoder(
 
     # Final layers
     x = K.layers.Conv3D(
-        filters=64,
+        filters=32,
         kernel_size=(3, 3, 3),
         padding="same",
         activation="relu",
@@ -87,7 +87,7 @@ def encoder_decoder(
     )(x)
 
     x = K.layers.Conv3D(
-        filters=32,
+        filters=16,
         kernel_size=(3, 3, 3),
         padding="same",
         activation="relu",
