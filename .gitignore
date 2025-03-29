@@ -176,6 +176,7 @@ cython_debug/
 # testing and experimenting
 *.ipynb
 *.ipynb_checkpoints
+misc.py
 
 # all data files
 mosdac_*

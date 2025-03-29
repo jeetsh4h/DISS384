@@ -19,6 +19,7 @@ def encoder_decoder(
         data_format="channels_last",
     )(inp)
     x = K.layers.LeakyReLU()(x)
+    skip1 = x  # Store for skip connection
     x = K.layers.MaxPooling3D(pool_size=(1, 2, 2))(x)
 
     # 2nd ConvLSTM layer
@@ -30,6 +31,7 @@ def encoder_decoder(
         data_format="channels_last",
     )(x)
     x = K.layers.LeakyReLU()(x)
+    skip2 = x  # Store for skip connection
     x = K.layers.MaxPooling3D(pool_size=(1, 2, 2))(x)
 
     # 3rd ConvLSTM layer
@@ -41,6 +43,7 @@ def encoder_decoder(
         data_format="channels_last",
     )(x)
     x = K.layers.LeakyReLU()(x)
+    skip3 = x  # Store for skip connection
     x = K.layers.MaxPooling3D(pool_size=(1, 2, 2))(x)
 
     # DECODER
@@ -54,6 +57,8 @@ def encoder_decoder(
     )(x)
     x = K.layers.LeakyReLU()(x)
     x = K.layers.UpSampling3D(size=(1, 2, 2))(x)
+    # Add skip connection
+    x = K.layers.Concatenate(axis=-1)([x, skip3])
 
     # 2nd ConvLSTM layer
     x = K.layers.ConvLSTM2D(
@@ -65,6 +70,8 @@ def encoder_decoder(
     )(x)
     x = K.layers.LeakyReLU()(x)
     x = K.layers.UpSampling3D(size=(1, 2, 2))(x)
+    # Add skip connection
+    x = K.layers.Concatenate(axis=-1)([x, skip2])
 
     # 3rd ConvLSTM layer
     x = K.layers.ConvLSTM2D(
@@ -76,6 +83,8 @@ def encoder_decoder(
     )(x)
     x = K.layers.LeakyReLU()(x)
     x = K.layers.UpSampling3D(size=(1, 2, 2))(x)
+    # Add skip connection
+    x = K.layers.Concatenate(axis=-1)([x, skip1])
 
     # Final layers
     x = K.layers.Conv3D(
