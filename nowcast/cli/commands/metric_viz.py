@@ -1,6 +1,6 @@
 from email.policy import default
 from ...config import TFDataConfig
-from ...utils.metric_viz_utils import metric_graphs
+from ...utils.metric_viz_utils import metric_graphs, overlay_metric_graphs
 
 
 def setup_parser(subparsers):
@@ -23,6 +23,13 @@ def setup_parser(subparsers):
         type=bool,
         default=False,
         help="Whether to use flow metrics, or model metrics. Model metrics by default",
+    )
+
+    metric_viz_parser.add_argument(
+        "--overlay",
+        action="store_true",
+        default=False,
+        help="Display model and flow metrics overlaid on the same graph",
     )
 
     return metric_viz_parser
@@ -59,17 +66,45 @@ def execute(args):
             "Error: The model directory names do not contain unique offsets."
         )
 
-    model_metrics_dir = [
-        model_dir / ("metrics" if not args.flow else "flow") for model_dir in model_dirs
-    ]
-    for model_metrics in model_metrics_dir:
-        if not model_metrics.exists():
-            print(
-                f"Error: The specified model '{model_metrics}' does not contain metrics."
-            )
-            return 1
+    if args.overlay and args.flow:
+        raise ValueError(
+            "Error: Overlay cannot be used in conjunction with flow metrics. Please use either overlay or flow metrics."
+        )
 
-    # saves the figures in the log directory.
-    # in the folder named `metric_viz_date_time`
-    #
-    metric_graphs(model_metrics_dir, offsets, args.flow)
+    if args.overlay:
+        # For overlay we need both model and flow metrics
+        model_metrics_dir = [model_dir / "metrics" for model_dir in model_dirs]
+        flow_metrics_dir = [model_dir / "flow" for model_dir in model_dirs]
+
+        # Check that both metrics and flow metrics exist
+        for model_metrics, flow_metrics in zip(model_metrics_dir, flow_metrics_dir):
+            if not model_metrics.exists():
+                print(
+                    f"Error: The specified model '{model_metrics}' does not contain metrics."
+                )
+                return 1
+            if not flow_metrics.exists():
+                print(
+                    f"Error: The specified model '{flow_metrics}' does not contain flow metrics."
+                )
+                return 1
+
+        # Create overlay graphs
+        overlay_metric_graphs(model_metrics_dir, flow_metrics_dir, offsets)
+
+    else:
+        model_metrics_dir = [
+            model_dir / ("metrics" if not args.flow else "flow")
+            for model_dir in model_dirs
+        ]
+        for model_metrics in model_metrics_dir:
+            if not model_metrics.exists():
+                print(
+                    f"Error: The specified model '{model_metrics}' does not contain metrics."
+                )
+                return 1
+
+        # saves the figures in the log directory.
+        # in the folder named `metric_viz_date_time`
+        #
+        metric_graphs(model_metrics_dir, offsets, args.flow)
