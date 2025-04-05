@@ -83,8 +83,13 @@ def corrcoef_frame(y_true, y_pred):
 
 
 def rmse_frame(y_true, y_pred):
-    mse_metrics = mse_frame(y_true, y_pred)
-    return [metric**0.5 for metric in mse_metrics]
+    denorm_true = hem_denormalize(y_true)
+    denorm_pred = hem_denormalize(y_pred)
+    batch_metric = [0.0 for _ in range(TFDataConfig.HEM_WINDOW_SIZE)]
+    for batch_true, batch_pred in zip(denorm_true, denorm_pred):
+        for i, (true_frame, pred_frame) in enumerate(zip(batch_true, batch_pred)):
+            batch_metric[i] += np.sqrt(((true_frame - pred_frame) ** 2).mean())
+    return batch_metric
 
 
 # all these functions take a batch of windows
@@ -113,8 +118,14 @@ def flow_mse_frame(y_true, y_pred):
 
 
 def flow_rmse_frame(y_true, y_pred):
-    mse_metrics = flow_mse_frame(y_true, y_pred)
-    return [metric**0.5 if metric is not None else None for metric in mse_metrics]
+    window_metric = []
+    for true_frame, pred_frame in zip(y_true, y_pred):
+        rmse = np.sqrt(np.nanmean((true_frame - pred_frame) ** 2))
+        if np.isnan(rmse).any():
+            rmse = None
+
+        window_metric.append(rmse)
+    return window_metric
 
 
 def flow_mae_frame(y_true, y_pred):
